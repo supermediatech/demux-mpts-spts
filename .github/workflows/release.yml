@@ -1,0 +1,80 @@
+# Push a tag like v1.0.0 -> builds .deb + .tar.gz for amd64 and arm64 and
+# publishes them as a GitHub Release.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            cc: gcc
+            pkgs: ""
+          - arch: arm64
+            cc: aarch64-linux-gnu-gcc
+            pkgs: gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y fakeroot ${{ matrix.pkgs }}
+
+      - name: Build packages
+        run: make dist VERSION=${GITHUB_REF_NAME#v} ARCH=${{ matrix.arch }} CC=${{ matrix.cc }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.arch }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Version
+        id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Combine checksums
+        run: cd dist && cat *.sha256 > SHA256SUMS && rm *.sha256 && cat SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## Install
+
+            **Debian / Ubuntu**
+            ```sh
+            # amd64 (most servers)  |  use _arm64.deb on ARM
+            wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mpts2spts_${{ steps.v.outputs.version }}_amd64.deb
+            sudo apt install ./mpts2spts_*_amd64.deb
+            ```
+
+            **Other Linux (RHEL, Rocky, Alma, Fedora, Arch, SUSE…)**
+            ```sh
+            wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/mpts2spts_${{ steps.v.outputs.version }}_amd64.tar.gz
+            tar xzf mpts2spts_*_amd64.tar.gz && cd mpts2spts_*_amd64
+            sudo ./install.sh
+            ```
+
+            The installer prints the web UI address and the generated admin password.

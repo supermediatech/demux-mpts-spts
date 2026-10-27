@@ -4,6 +4,10 @@
 set -e
 [ "$(id -u)" = 0 ] || { echo "run as root: sudo $0" >&2; exit 1; }
 cd "$(dirname "$0")"
+./mpts2spts -version >/dev/null 2>&1 || {
+    echo "this package does not match this machine ($(uname -m)); download the other architecture" >&2
+    exit 1
+}
 
 install -d /opt/mpts2spts
 install -m 0755 mpts2spts /opt/mpts2spts/mpts2spts

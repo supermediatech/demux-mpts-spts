@@ -1,11 +1,12 @@
 # Build:   make              -> ./mpts2spts (static binary)
 # Release: make dist         -> dist/*.deb and dist/*.tar.gz
 #          make dist VERSION=1.2.0
+#          make dist ARCH=arm64 CC=aarch64-linux-gnu-gcc   (cross build)
 VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)
 ifeq ($(VERSION),)
 VERSION := 1.0.0
 endif
-ARCH    := amd64
+ARCH    ?= amd64
 NAME    := mpts2spts
 PKG     := $(NAME)_$(VERSION)_$(ARCH)
 DIST    := dist
@@ -17,7 +18,7 @@ LDFLAGS := -s -w -X main.version=$(VERSION) -linkmode external -extldflags '-sta
 all: build
 
 build:
-	CGO_ENABLED=1 GOARCH=$(ARCH) go build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(NAME) .
+	CGO_ENABLED=1 GOARCH=$(ARCH) CC=$(CC) go build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(NAME) .
 
 deb: build
 	rm -rf $(DIST)/deb && mkdir -p $(DIST)/deb/DEBIAN

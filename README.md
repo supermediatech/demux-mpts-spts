@@ -4,6 +4,8 @@ Splits multicast MPTS inputs into single-program SPTS outputs (UDP or RTP), mana
 
 ## Install (release packages)
 
+Ready-made packages for **amd64** and **arm64** are on the [Releases page](https://github.com/supermediatech/demux-mpts-spts/releases). Pushing a `v*` tag builds and publishes them through GitHub Actions (`.github/workflows/release.yml`).
+
 Build the packages with `make dist` (or `make dist VERSION=1.2.0`). That produces, in `dist/`:
 
 | File | For |
