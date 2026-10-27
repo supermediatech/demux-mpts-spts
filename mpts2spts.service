@@ -1,0 +1,15 @@
+[Unit]
+Description=MPTS to SPTS splitter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/mpts2spts
+ExecStart=/opt/mpts2spts/mpts2spts -listen :8080 -db /opt/mpts2spts/mpts2spts.db -env /opt/mpts2spts/.env
+Restart=always
+RestartSec=2
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

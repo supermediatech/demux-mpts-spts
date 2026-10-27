@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPTS → SPTS</title>
+<style>
+:root{
+  --bg:#f4f5f7;--panel:#fff;--panel2:#f9fafb;--line:#e3e6ea;--text:#1d2329;--muted:#6b7480;
+  --accent:#2563eb;--accent-h:#1d4ed8;--ok:#16a34a;--warn:#d97706;--err:#dc2626;--chip:#eef2f7;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1216;--panel:#171b21;--panel2:#1c2128;--line:#2a313a;--text:#e5e9ee;--muted:#8a94a0;
+  --accent:#3b82f6;--accent-h:#60a5fa;--chip:#232a33;--shadow:0 1px 2px rgba(0,0,0,.4);
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+.muted{color:var(--muted)}
+header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+header .stats{display:flex;gap:18px;margin-left:12px}
+header .stats div b{font-variant-numeric:tabular-nums}
+header .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-h)}
+.btn.danger{color:var(--err)}
+.btn.sm{padding:3px 9px;font-size:12.5px}
+.btn:disabled{opacity:.5;cursor:default}
+.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 96px)}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+aside .top{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+aside .top input{flex:1;min-width:0}
+.inlist{overflow:auto;flex:1}
+.initem{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:12px 1fr auto;gap:2px 10px;align-items:center}
+.initem:hover{background:var(--panel2)}
+.initem.sel{background:var(--chip);box-shadow:inset 3px 0 0 var(--accent)}
+.initem .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.initem .u{grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.ok{background:var(--ok)}.dot.nosignal{background:var(--warn)}.dot.error{background:var(--err)}.dot.off{background:var(--line)}
+main{padding:20px;overflow:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);margin-bottom:18px}
+.card>.hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card>.hd h2{font-size:15px;margin:0;font-weight:650}
+.card>.hd .sp{flex:1}
+.meta{display:flex;gap:22px;padding:12px 16px;flex-wrap:wrap}
+.meta div span{display:block;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;background:var(--panel2)}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;padding:1px 7px;border-radius:10px;background:var(--chip);font-size:11.5px;margin:1px 2px 1px 0}
+.chip.video{color:#7c3aed}.chip.audio{color:#0891b2}.chip.ok{color:var(--ok)}.chip.err{color:var(--err)}.chip.warn{color:var(--warn)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.bulk{display:flex;gap:8px;align-items:center;padding:10px 16px;background:var(--panel2);border-top:1px solid var(--line);flex-wrap:wrap}
+textarea{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 9px;outline:none;resize:vertical;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:inherit}
+textarea:focus{border-color:var(--accent)}
+input[type=text],input[type=password],input[type=number],select{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 9px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+.switch{position:relative;width:34px;height:19px;display:inline-block}
+.switch input{display:none}
+.switch span{position:absolute;inset:0;background:var(--line);border-radius:20px;cursor:pointer;transition:.15s}
+.switch span:before{content:"";position:absolute;width:15px;height:15px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s}
+.switch input:checked+span{background:var(--ok)}
+.switch input:checked+span:before{transform:translateX(15px)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding-top:8vh;z-index:20}
+.modal-bg.show{display:flex}
+.modal{background:var(--panel);border-radius:12px;width:min(620px,94vw);max-height:84vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.modal .hd h3{margin:0;font-size:15px;flex:1}
+.modal .bd{padding:16px 18px}
+.modal .ft{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.form{display:grid;grid-template-columns:150px 1fr;gap:10px 14px;align-items:center}
+.form label{color:var(--muted);font-size:13px}
+.form input,.form select{width:100%}
+.form .hint{grid-column:2;font-size:12px;color:var(--muted);margin-top:-6px}
+.row{display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.tabs button{border:none;background:none;padding:8px 12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.err-msg{color:var(--err);font-size:13px;margin-top:10px;min-height:1em}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
+#toast.show{opacity:1}
+#login{display:none;min-height:100vh;align-items:center;justify-content:center}
+#login .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:28px;width:340px}
+#login h1{font-size:18px;margin:0 0 4px}
+#login input{width:100%;margin-top:12px}
+#login .btn{width:100%;margin-top:16px;padding:9px}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:5px}
+.icon-btn:hover{background:var(--chip);color:var(--text)}
+.copy{cursor:pointer}.copy:hover{text-decoration:underline}
+header .logo{cursor:pointer;user-select:none}
+header .logo:hover{color:var(--accent)}
+.gsearch{width:240px}
+.btn-group{display:flex}
+.btn-group .btn{border-radius:0;margin-left:-1px}
+.btn-group .btn:first-child{border-radius:7px 0 0 7px;margin-left:0}
+.btn-group .btn:last-child{border-radius:0 7px 7px 0}
+.sys{display:flex;gap:14px;font-size:12.5px}
+.sys .bar{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--line);vertical-align:middle;margin:0 4px;overflow:hidden}
+.sys .bar i{display:block;height:100%;background:var(--ok)}
+.sys .bar i.warn{background:var(--warn)}.sys .bar i.err{background:var(--err)}
+.tsearch{width:200px;padding:4px 8px!important;font-size:13px}
+.hl{background:rgba(250,204,21,.35);border-radius:2px}
+footer{padding:12px 20px;border-top:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+footer a{color:var(--accent);text-decoration:none}footer a:hover{text-decoration:underline}
+.sec-title{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:0 0 8px}
+@media (max-width:1280px){.gsearch{width:160px}header .stats{display:none}}
+@media (max-width:860px){.layout{grid-template-columns:1fr}aside{max-height:260px}.sys{display:none}header{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<div id="login"><form class="box" onsubmit="doLogin(event)">
+  <h1>MPTS → SPTS</h1><div class="muted">Sign in to continue</div>
+  <input id="lu" type="text" placeholder="Username" autocomplete="username" autofocus>
+  <input id="lp" type="password" placeholder="Password" autocomplete="current-password">
+  <button class="btn primary">Sign in</button>
+  <div class="err-msg" id="lerr"></div>
+</form></div>
+
+<div id="app" style="display:none">
+<header>
+  <h1 class="logo" onclick="goHome()" title="Home">MPTS → SPTS</h1>
+  <div class="stats muted">
+    <div>Inputs <b id="s-in">0</b></div>
+    <div>Outputs <b id="s-out">0</b></div>
+    <div>In <b id="s-inr">0</b> Mbps</div>
+    <div>Out <b id="s-outr">0</b> Mbps</div>
+  </div>
+  <div class="sp"></div>
+  <div class="sys muted" title="Host CPU (all cores) and memory · App CPU is % of one core">
+    <div>CPU <span class="bar"><i id="sy-cpub"></i></span><b id="sy-cpu">–</b></div>
+    <div>RAM <span class="bar"><i id="sy-memb"></i></span><b id="sy-mem">–</b></div>
+    <div>App <b id="sy-app">–</b></div>
+  </div>
+  <input type="text" id="gq" class="gsearch" placeholder="Search everything…" oninput="render()">
+  <div class="btn-group">
+    <button class="btn" onclick="control('start')" title="Enable and start every input">▶ Start all</button>
+    <button class="btn" onclick="control('stop')" title="Disable and stop every input">■ Stop all</button>
+    <button class="btn" onclick="control('restart')" title="Reopen every input and output">↻ Restart all</button>
+  </div>
+  <a class="btn" href="api/playlist.m3u">Playlist</a>
+  <button class="btn" onclick="openSettings()">Settings</button>
+  <button class="btn" onclick="logout()">Sign out</button>
+</header>
+<div class="layout">
+  <aside>
+    <div class="top"><input type="text" id="filter" placeholder="Filter inputs…" oninput="render()"><button class="btn primary" onclick="openInput()">+ Input</button></div>
+    <div class="inlist" id="inlist"></div>
+  </aside>
+  <main id="main"></main>
+</div>
+<footer><span>© <span id="yr"></span> Super Media Tech. All rights reserved.</span><a href="https://www.supermediatech.com" target="_blank" rel="noopener">www.supermediatech.com</a></footer>
+</div>
+
+<!-- input modal -->
+<div class="modal-bg" id="m-input"><div class="modal">
+  <div class="hd"><h3 id="mi-title">Add input</h3><button class="icon-btn" onclick="closeM('m-input')">✕</button></div>
+  <div class="bd">
+    <div class="tabs" id="mi-tabs">
+      <button data-t="disc" class="on" onclick="miTab('disc')">Discover all</button>
+      <button data-t="iface" onclick="miTab('iface')">By interface</button>
+      <button data-t="manual" onclick="miTab('manual')">Manual URL</button>
+      <button data-t="scan" onclick="miTab('scan')">Scan range</button>
+    </div>
+    <div class="form">
+      <label>Name</label><input type="text" id="mi-name" placeholder="optional, e.g. Satellite 1">
+    </div>
+    <div id="mi-iface" class="form" style="margin-top:10px">
+      <label>Interface</label><select id="mi-if" onchange="miBuild()"></select>
+      <label>Protocol</label><select id="mi-proto" onchange="miBuild()"><option>udp</option><option>rtp</option></select>
+      <label style="align-self:start;padding-top:6px">Groups</label><textarea id="mi-group" class="mono" rows="5" placeholder="239.2.2.2&#10;239.2.2.10-239.2.2.20&#10;239.3.3.1-8:5000" oninput="miBuild()"></textarea>
+      <div class="hint">One or many: one per line or comma separated. Ranges like <span class="mono">239.2.2.1-239.2.2.20</span> or <span class="mono">239.2.2.1-20</span>. Add <span class="mono">:port</span> to override the default port.</div>
+      <label>Default port</label><input type="number" id="mi-port" value="1234" oninput="miBuild()">
+      <label>SSM source</label><input type="text" id="mi-src" placeholder="optional sender IP" oninput="miBuild()">
+      <label style="align-self:start">Will add</label><div id="mi-preview" class="mono" style="max-height:130px;overflow:auto">—</div>
+    </div>
+    <div id="mi-manual" class="form" style="margin-top:10px;display:none">
+      <label>URL</label><input type="text" id="mi-url" class="mono" placeholder="udp://239.2.2.2:1234?localaddr=192.168.10.10">
+      <div class="hint">udp:// or rtp://, optional <span class="mono">localaddr=</span> and <span class="mono">sources=</span></div>
+    </div>
+    <div id="mi-disc" style="margin-top:10px">
+      <div class="muted" style="margin-bottom:10px;font-size:13px">Listens on the interface and finds every TS stream (UDP or RTP, any IP, any port). Multicast behind an IGMP-snooping switch only shows up once joined, so use <b>Scan range</b> for those.</div>
+      <div class="form">
+        <label>Interface</label><select id="dc-if"></select>
+        <label>Listen (s)</label><input type="number" id="dc-sec" value="5" min="2" max="30">
+      </div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="dc-go" onclick="doDiscover()">Discover</button><span class="muted" id="dc-msg"></span></div>
+      <div id="dc-res" style="margin-top:10px"></div>
+    </div>
+    <div id="mi-scan" style="margin-top:10px;display:none">
+      <div class="form">
+        <label>Interface</label><select id="sc-if"></select>
+        <label>Protocol</label><select id="sc-proto"><option>udp</option><option>rtp</option></select>
+        <label>Start group</label><input type="text" id="sc-start" value="239.2.2.1">
+        <label>Count</label><input type="number" id="sc-count" value="32" min="1" max="256">
+        <label>Port</label><input type="number" id="sc-port" value="1234">
+        <label>Listen (s)</label><input type="number" id="sc-sec" value="3" min="2" max="15">
+      </div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="sc-go" onclick="doScan()">Scan</button><span class="muted" id="sc-msg"></span></div>
+      <div id="sc-res" style="margin-top:10px"></div>
+    </div>
+    <div class="err-msg" id="mi-err"></div>
+  </div>
+  <div class="ft"><button class="btn" onclick="closeM('m-input')">Cancel</button><button class="btn primary" id="mi-save" onclick="saveInput()">Save</button></div>
+</div></div>
+
+<!-- output modal -->
+<div class="modal-bg" id="m-out"><div class="modal">
+  <div class="hd"><h3 id="mo-title">Output</h3><button class="icon-btn" onclick="closeM('m-out')">✕</button></div>
+  <div class="bd"><div class="form">
+    <label>Source service</label><div id="mo-src" class="mono"></div>
+    <label>Program name</label><input type="text" id="mo-name">
+    <label>Provider</label><input type="text" id="mo-prov">
+    <label>Service ID</label><input type="number" id="mo-sid" placeholder="same as source">
+    <div class="hint">Optional. Leave empty to keep the source service ID.</div>
+    <label>TS ID</label><input type="number" id="mo-tsid" placeholder="same as service ID">
+    <label>Protocol</label><select id="mo-proto"><option>udp</option><option>rtp</option></select>
+    <label>Address</label><div class="row"><input type="text" id="mo-addr" class="mono" placeholder="auto"><button class="btn sm" onclick="$('#mo-addr').value=''">Auto</button></div>
+    <div class="hint">ip:port. Leave empty to allocate from the pool in Settings.</div>
+    <label>Interface</label><select id="mo-if"></select>
+  </div><div class="err-msg" id="mo-err"></div></div>
+  <div class="ft"><button class="btn" onclick="closeM('m-out')">Cancel</button><button class="btn primary" onclick="saveOutput()">Save</button></div>
+</div></div>
+
+<!-- settings modal -->
+<div class="modal-bg" id="m-set"><div class="modal">
+  <div class="hd"><h3>Settings</h3><button class="icon-btn" onclick="closeM('m-set')">✕</button></div>
+  <div class="bd">
+    <div class="muted" style="margin-bottom:12px">Defaults for automatically generated outputs. Existing outputs keep their address.</div>
+    <div class="form">
+      <label>First group</label><input type="text" id="st-group" class="mono">
+      <label>Port</label><input type="number" id="st-port">
+      <label>Protocol</label><select id="st-proto"><option>udp</option><option>rtp</option></select>
+      <label>Interface</label><select id="st-if"></select>
+      <label>Multicast TTL</label><input type="number" id="st-ttl">
+    </div><div class="err-msg" id="st-err"></div>
+  </div>
+  <div class="ft"><button class="btn" onclick="closeM('m-set')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button></div>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let bk={};const bkP=()=>bk.proto??S.settings.auto_proto;
+let S={inputs:[],outputs:[],settings:{}}, IFS=[], sel=null, checked=new Set(), editIn=null, editOut=null, newOut=null, timer=null;
+
+async function api(method,path,body){
+  const r=await fetch(path,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+  if(r.status===401){showLogin();throw new Error('unauthorized')}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error||r.statusText);
+  return j;
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
+function showLogin(){clearInterval(timer);timer=null;$('#app').style.display='none';$('#login').style.display='flex'}
+async function doLogin(e){
+  e.preventDefault();$('#lerr').textContent='';
+  try{await api('POST','api/login',{username:$('#lu').value,password:$('#lp').value});start()}
+  catch(err){$('#lerr').textContent=err.message}
+}
+async function logout(){await api('POST','api/logout');showLogin()}
+
+async function start(){
+  try{await refresh()}catch(e){return}
+  $('#login').style.display='none';$('#app').style.display='';
+  IFS=await api('GET','api/interfaces');
+  if(!timer) timer=setInterval(()=>refresh().catch(()=>{}),2000);
+}
+async function refresh(){S=await api('GET','api/state');render()}
+
+const mbps=k=>(k/1000).toFixed(k>=10000?1:2);
+const stateOf=i=>!i.enabled?'off':(i.status?.state||'starting');
+const stateTxt={ok:'Receiving',nosignal:'No signal',error:'Error',starting:'Starting',off:'Disabled'};
+const stype=t=>({1:'TV',2:'Radio',0x11:'HD TV',0x16:'SD TV',0x19:'HD TV',0x1F:'UHD TV',0x0A:'Radio',0x0C:'Data'}[t]||'Type '+t);
+function ifOpts(v){return '<option value="">Any (default route)</option>'+IFS.map(i=>`<option value="${esc(i.addr)}" ${i.addr===v?'selected':''}>${esc(i.name)} — ${esc(i.addr)}</option>`).join('')}
+
+// q holds per-table searches; they survive the periodic re-render
+const q={svc:'',out:''};
+const match=(query,...fields)=>{const h=fields.join(' ').toLowerCase();return query.toLowerCase().split(/\s+/).filter(Boolean).every(t=>h.includes(t))};
+const outText=o=>{const i=S.inputs.find(x=>x.id===o.input_id);return [o.name,o.provider,o.url,o.src_sid,o.out_sid,i?.name||'',o.enabled?'enabled':'disabled']};
+const svcText=x=>[x.name,x.provider,x.sid,stype(x.type),...x.streams.map(e=>e.kind+' '+e.pid)];
+const gb=b=>b>=1<<30?(b/(1<<30)).toFixed(1)+' GB':(b/(1<<20)).toFixed(0)+' MB';
+function bar(el,pct){el.style.width=Math.min(100,pct)+'%';el.className=pct>90?'err':pct>70?'warn':''}
+
+function render(){
+  // innerHTML replacement drops focus; remember and restore it for search boxes
+  const ae=document.activeElement,fid=ae&&ae.id,fs=ae&&ae.selectionStart,fe=ae&&ae.selectionEnd;
+  const f=$('#filter').value.toLowerCase(),g=$('#gq').value.trim();
+  let inR=0,outR=0;
+  S.inputs.forEach(i=>inR+=i.status?.kbps||0);
+  S.outputs.forEach(o=>outR+=o.status?.kbps||0);
+  $('#s-in').textContent=S.inputs.length;$('#s-out').textContent=S.outputs.length;
+  $('#s-inr').textContent=mbps(inR);$('#s-outr').textContent=mbps(outR);
+  const y=S.system;
+  if(y){
+    $('#sy-cpu').textContent=y.cpu.toFixed(0)+'%';bar($('#sy-cpub'),y.cpu);
+    $('#sy-mem').textContent=`${gb(y.mem_used)} / ${gb(y.mem_total)}`;bar($('#sy-memb'),y.mem_used/y.mem_total*100);
+    $('#sy-app').textContent=`${y.app_cpu.toFixed(1)}% · ${gb(y.app_rss)}`;
+  }
+  if(sel!==null&&!S.inputs.find(i=>i.id===sel)) sel=null;
+  $('#inlist').innerHTML=S.inputs.filter(i=>!f||(i.name+i.url).toLowerCase().includes(f)).map(i=>{
+    const st=stateOf(i),n=S.outputs.filter(o=>o.input_id===i.id).length;
+    return `<div class="initem ${i.id===sel&&!g?'sel':''}" onclick="pick(${i.id})">
+      <span class="dot ${st}" title="${stateTxt[st]||st}"></span><span class="nm">${esc(i.name)}</span>
+      <span class="muted mono">${i.enabled?mbps(i.status?.kbps||0):'—'}</span>
+      <span></span><span class="u muted mono">${esc(i.url)} · ${n} out</span></div>`}).join('')||'<div class="empty">No inputs</div>';
+  $('#main').innerHTML=g?searchView(g):sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
+  if(fid&&ae!==document.activeElement){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(fs,fe)}catch(e){}}}
+}
+function pick(id){if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';render()}
+function goHome(){sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';render()}
+function tsearch(key,ph){return `<input type="text" id="ts-${key}" class="tsearch" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;render()">`}
+
+function outCard(title,list,showInput,extra=''){
+  const vis=list.filter(o=>!q.out||match(q.out,...outText(o)));
+  const ids=JSON.stringify(vis.map(o=>o.id)),on=vis.filter(o=>o.enabled).length;
+  return `<div class="card"><div class="hd"><h2>${title}</h2><span class="muted">${on}/${vis.length} enabled</span><span class="sp"></span>${extra}${tsearch('out','Search outputs…')}
+    <label class="row muted" style="gap:6px;font-size:13px" title="Enable / disable all shown outputs">All
+      <span class="switch"><input type="checkbox" ${vis.length&&on===vis.length?'checked':''} ${vis.length?'':'disabled'} onchange='setOuts(${ids},this.checked)'><span></span></span></label>
+    <button class="btn sm danger" ${vis.length?'':'disabled'} onclick='delOuts(${ids})'>Delete all</button></div>
+    ${outRows(vis,showInput)}</div>`;
+}
+function outRows(list,showInput){
+  if(!list.length) return `<div class="empty">${q.out?'No matching outputs':'No outputs'}</div>`;
+  return `<table><tr><th style="width:50px">On</th><th>Program</th><th>Service ID</th>${showInput?'<th>Input</th>':''}<th>Output</th><th class="num">Mbps</th><th>Status</th><th style="width:90px"></th></tr>`+
+  list.map(o=>{
+    const s=o.status;let badge;
+    if(!o.enabled) badge='<span class="chip">disabled</span>';
+    else if(s?.error) badge=`<span class="chip err" title="${esc(s.error)}">${esc(s.error.slice(0,40))}</span>`;
+    else if(s?.active) badge='<span class="chip ok">active</span>';
+    else badge='<span class="chip warn">waiting</span>';
+    const inp=S.inputs.find(i=>i.id===o.input_id);
+    return `<tr><td><label class="switch"><input type="checkbox" ${o.enabled?'checked':''} onchange="toggleOut(${o.id},this.checked)"><span></span></label></td>
+    <td><b>${esc(o.name)}</b>${o.provider?` <span class="muted">· ${esc(o.provider)}</span>`:''}</td>
+    <td class="mono">${o.src_sid}${o.out_sid!==o.src_sid?` → <b>${o.out_sid}</b>`:''}</td>
+    ${showInput?`<td><a href="#" onclick="pick(${o.input_id});return false">${esc(inp?.name||'')}</a></td>`:''}
+    <td class="mono copy" title="Click to copy" onclick="copy('${esc(o.url)}')">${esc(o.url)}</td>
+    <td class="num mono">${o.enabled?mbps(s?.kbps||0):'—'}</td><td>${badge}</td>
+    <td style="text-align:right"><button class="icon-btn" title="Edit" onclick="openOut(${o.id})">✎</button><button class="icon-btn" title="Delete" onclick="delOut(${o.id})">🗑</button></td></tr>`}).join('')+'</table>';
+}
+function overview(){
+  if(!S.inputs.length) return `<div class="card"><div class="empty">Add an MPTS input to get started.<br><br><button class="btn primary" onclick="openInput()">+ Add input</button></div></div>`;
+  return outCard('All outputs',S.outputs,true);
+}
+function searchView(g){
+  const ins=S.inputs.filter(i=>match(g,i.name,i.url,stateTxt[stateOf(i)]));
+  const svcs=[];S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
+  const outs=S.outputs.filter(o=>match(g,...outText(o)));
+  const inT=ins.length?`<table><tr><th></th><th>Input</th><th>URL</th><th class="num">Mbps</th><th>Programs</th></tr>`+ins.map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td style="width:24px"><span class="dot ${stateOf(i)}"></span></td><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0):'—'}</td><td>${(i.status?.services||[]).length}</td></tr>`).join('')+'</table>':'<div class="empty">No matching inputs</div>';
+  const svT=svcs.length?`<table><tr><th>SID</th><th>Program</th><th>Input</th><th>Streams</th><th class="num">Mbps</th><th></th></tr>`+svcs.map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?` <span class="muted">· ${esc(x.provider)}</span>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${x.streams.map(e=>`<span class="chip ${e.kind}">${e.kind} ${e.pid}</span>`).join('')}</td><td class="num mono">${mbps(x.kbps)}</td><td style="text-align:right"><button class="btn sm" onclick="sel=${i.id};openOut(null,${x.sid})">+ Output</button></td></tr>`).join('')+'</table>':'<div class="empty">No matching programs</div>';
+  return `<div class="card"><div class="hd"><h2>Search: “${esc(g)}”</h2><span class="sp"></span><button class="btn sm" onclick="$('#gq').value='';render()">Clear</button></div></div>
+    <div class="card"><div class="hd"><h2>Inputs</h2><span class="muted">${ins.length}</span></div>${inT}</div>
+    <div class="card"><div class="hd"><h2>Programs</h2><span class="muted">${svcs.length}</span></div>${svT}</div>
+    ${outCard('Outputs',outs,true)}`;
+}
+function inputView(i){
+  const st=stateOf(i),s=i.status||{},outs=S.outputs.filter(o=>o.input_id===i.id);
+  const all=s.services||[],svcs=all.filter(x=>!q.svc||match(q.svc,...svcText(x)));
+  const used={};outs.forEach(o=>used[o.src_sid]=(used[o.src_sid]||0)+1);
+  for(const c of [...checked]) if(!all.find(x=>x.sid===c)) checked.delete(c);
+  const allChk=svcs.length&&svcs.every(x=>checked.has(x.sid));
+  let svcTable;
+  if(!i.enabled) svcTable='<div class="empty">Input is disabled</div>';
+  else if(!all.length) svcTable=`<div class="empty">${st==='error'?esc(s.error):'Waiting for PAT/PMT…'}</div>`;
+  else if(!svcs.length) svcTable='<div class="empty">No matching programs</div>';
+  else svcTable=`<table><tr><th style="width:34px"><input type="checkbox" ${allChk?'checked':''} onchange="chkAll(this.checked)"></th><th>SID</th><th>Program</th><th>Type</th><th>Streams</th><th class="num">Mbps</th><th>Outputs</th><th></th></tr>`+
+    svcs.map(x=>`<tr><td><input type="checkbox" ${checked.has(x.sid)?'checked':''} onchange="chk(${x.sid},this.checked)"></td>
+      <td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?` <span class="muted">· ${esc(x.provider)}</span>`:''}</td>
+      <td>${stype(x.type)}</td>
+      <td>${x.streams.map(e=>`<span class="chip ${e.kind}" title="type 0x${e.type.toString(16)}">${e.kind} ${e.pid}</span>`).join('')}</td>
+      <td class="num mono">${mbps(x.kbps)}</td><td>${used[x.sid]?`<span class="chip ok">${used[x.sid]}</span>`:''}</td>
+      <td style="text-align:right"><button class="btn sm" onclick="openOut(null,${x.sid})">+ Output</button></td></tr>`).join('')+'</table>';
+  if(all.length&&i.enabled) svcTable+=
+    `<div class="bulk"><b>${checked.size}</b> selected — create outputs with auto address:
+      <select id="bk-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
+      <select id="bk-if" onchange="bk.la=this.value">${ifOpts(bk.la??S.settings.auto_localaddr)}</select>
+      <button class="btn primary sm" ${checked.size?'':'disabled'} onclick="bulkCreate()">Create ${checked.size||''} output${checked.size===1?'':'s'}</button></div>`;
+  return `<div class="card"><div class="hd"><span class="dot ${st}"></span><h2>${esc(i.name)}</h2><span class="mono muted">${esc(i.url)}</span><span class="sp"></span>
+      <label class="switch" title="Enable / disable"><input type="checkbox" ${i.enabled?'checked':''} onchange="toggleIn(${i.id},this.checked)"><span></span></label>
+      <button class="btn sm" onclick="openInput(${i.id})">Edit</button><button class="btn sm danger" onclick="delIn(${i.id})">Delete</button></div>
+    <div class="meta"><div><span>Status</span>${stateTxt[st]||st}${s.error?` <span class="muted">— ${esc(s.error)}</span>`:''}</div>
+      <div><span>Bitrate</span>${mbps(s.kbps||0)} Mbps</div>
+      <div><span>TSID</span>${s.tsid??'—'}</div><div><span>ONID</span>${s.onid??'—'}</div>
+      <div><span>Services</span>${all.length}</div><div><span>Outputs</span>${outs.length}</div></div></div>
+    <div class="card"><div class="hd"><h2>Programs</h2><span class="sp"></span>${tsearch('svc','Search programs…')}</div>${svcTable}</div>
+    ${outCard('Outputs',outs,false)}`;
+}
+async function setOuts(ids,on){
+  if(!ids.length)return;
+  try{await api('POST','api/outputs/enabled',{ids,enabled:on});toast(`${on?'Enabled':'Disabled'} ${ids.length} output${ids.length>1?'s':''}`)}catch(e){toast(e.message)}
+  refresh();
+}
+async function delOuts(ids){
+  if(!ids.length)return;
+  if(!confirm(`Delete ${ids.length} output${ids.length>1?'s':''}${q.out?' matching "'+q.out+'"':''}? This cannot be undone.`))return;
+  try{await api('POST','api/outputs/delete',{ids});toast(`Deleted ${ids.length} output${ids.length>1?'s':''}`)}catch(e){toast(e.message)}
+  refresh();
+}
+async function control(a){
+  const msg={start:'Start (enable) all inputs?',stop:'Stop (disable) all inputs? All outputs will stop until started again.',restart:'Restart all inputs and outputs? Streams will glitch for about a second.'}[a];
+  if(!confirm(msg))return;
+  try{await api('POST','api/control/'+a);toast({start:'All inputs started',stop:'All inputs stopped',restart:'All inputs restarted'}[a])}catch(e){toast(e.message)}
+  refresh();
+}
+function chk(sid,on){on?checked.add(sid):checked.delete(sid);render()}
+function chkAll(on){const i=S.inputs.find(x=>x.id===sel);(i.status?.services||[]).filter(x=>!q.svc||match(q.svc,...svcText(x))).forEach(x=>on?checked.add(x.sid):checked.delete(x.sid));render()}
+function copy(t){navigator.clipboard?.writeText(t).then(()=>toast('Copied'))}
+
+async function bulkCreate(){
+  const proto=$('#bk-proto').value,la=$('#bk-if').value,list=[...checked].sort((a,b)=>a-b);let ok=0;
+  for(const sid of list){
+    try{await api('POST','api/outputs',{input_id:sel,src_sid:sid,proto,localaddr:la});ok++}
+    catch(e){toast(`SID ${sid}: ${e.message}`);break}
+  }
+  checked.clear();await refresh();if(ok) toast(`Created ${ok} output${ok>1?'s':''}`);
+}
+
+// ----- modals -----
+function openM(id){$('#'+id).classList.add('show')}
+function closeM(id){$('#'+id).classList.remove('show')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show'))});
+
+let miMode='disc';
+function miTab(t){miMode=t;document.querySelectorAll('#mi-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  ['disc','iface','manual','scan'].forEach(x=>$('#mi-'+x).style.display=x===t?'':'none');$('#mi-save').style.display=t==='scan'||t==='disc'?'none':''}
+// expandGroups turns "239.2.2.1-20:5000, 239.3.3.3" into ["239.2.2.1:5000", …, "239.3.3.3:1234"]
+const ip2n=s=>{const p=s.split('.').map(Number);if(p.length!==4||p.some(x=>!Number.isInteger(x)||x<0||x>255))throw new Error('bad address: '+s);return((p[0]<<24)>>>0)+(p[1]<<16)+(p[2]<<8)+p[3]};
+const n2ip=n=>[n>>>24,(n>>16)&255,(n>>8)&255,n&255].join('.');
+function expandGroups(text,defPort){
+  const out=[];
+  for(let tok of text.split(/[\s,;]+/).filter(Boolean)){
+    let port=defPort;const m=tok.match(/^(.*):(\d+)$/);if(m){tok=m[1];port=+m[2]}
+    if(!(port>0&&port<65536)) throw new Error('bad port in '+tok);
+    let [a,b]=tok.split('-');const lo=ip2n(a);
+    let hi=lo;if(b!==undefined) hi=b.includes('.')?ip2n(b):ip2n(a.split('.').slice(0,3).join('.')+'.'+b);
+    if(hi<lo) throw new Error('range end before start: '+tok);
+    for(let n=lo;n<=hi;n++){out.push(n2ip(n)+':'+port);if(out.length>1024) throw new Error('more than 1024 groups')}
+  }
+  return [...new Set(out)];
+}
+function miBuild(){
+  const p=+$('#mi-port').value,la=$('#mi-if').value,src=$('#mi-src').value.trim();
+  const q=[];if(la)q.push('localaddr='+la);if(src)q.push('sources='+src);
+  let urls=[];
+  try{urls=expandGroups($('#mi-group').value,p).map(a=>`${$('#mi-proto').value}://${a}${q.length?'?'+q.join('&'):''}`);$('#mi-err').textContent=''}
+  catch(e){$('#mi-err').textContent=e.message}
+  const have=new Set(S.inputs.map(i=>i.url));
+  $('#mi-preview').innerHTML=urls.length?`<div class="muted" style="font-family:inherit">${urls.length} input${urls.length>1?'s':''}</div>`+urls.map(u=>`<div>${esc(u)}${have.has(u)?' <span class="chip">exists</span>':''}</div>`).join(''):'—';
+  if(miMode==='iface') $('#mi-save').textContent=urls.length>1?`Add ${urls.length} inputs`:'Save';
+  return urls;
+}
+function openInput(id){
+  editIn=id??null;const i=S.inputs.find(x=>x.id===id);
+  $('#mi-title').textContent=i?'Edit input':'Add input';$('#mi-err').textContent='';
+  $('#mi-name').value=i?.name||'';$('#mi-url').value=i?.url||'';
+  $('#mi-if').innerHTML=ifOpts('');$('#sc-if').innerHTML=ifOpts('');$('#dc-if').innerHTML=ifOpts('').replace('Any (default route)','All interfaces');$('#dc-res').innerHTML='';$('#dc-msg').textContent='';
+  $('#mi-group').value='';$('#mi-src').value='';$('#sc-res').innerHTML='';$('#sc-msg').textContent='';
+  $('#mi-tabs').style.display=i?'none':'';miTab(i?'manual':'disc');miBuild();$('#mi-err').textContent='';openM('m-input');
+}
+async function saveInput(){
+  const cur=S.inputs.find(x=>x.id===editIn);
+  if(miMode==='iface'){
+    const urls=miBuild();
+    if(!urls.length){$('#mi-err').textContent||($('#mi-err').textContent='Enter at least one group');return}
+    return addBulk(urls,true);
+  }
+  const url=$('#mi-url').value.trim();
+  try{
+    const r=await api(editIn?'PUT':'POST',editIn?`api/inputs/${editIn}`:'api/inputs',{name:$('#mi-name').value,url,enabled:cur?cur.enabled:true});
+    closeM('m-input');sel=r.id;await refresh();toast('Input saved');
+  }catch(e){$('#mi-err').textContent=e.message}
+}
+// found[] holds the latest scan/discover results per pane, for "Add all"
+const found={sc:[],dc:[]};
+function showFound(k,r){
+  found[k]=r;
+  const have=new Set(S.inputs.map(i=>i.url)),fresh=r.filter(x=>!have.has(x.url)).length;
+  $('#'+k+'-msg').innerHTML=`${r.length} stream${r.length===1?'':'s'} found`+(fresh?` <button class="btn sm primary" onclick="addAllFound('${k}')">Add all ${fresh}</button>`:'');
+  $('#'+k+'-res').innerHTML=r.length?`<table><tr><th>URL</th>${k==='dc'?'<th>Sender</th>':''}<th class="num">Mbps</th><th>Programs</th><th></th></tr>`+r.map(x=>`<tr><td class="mono">${esc(x.url)}</td>${k==='dc'?`<td class="mono">${esc(x.source||'')}</td>`:''}<td class="num mono">${mbps(x.kbps)}</td>
+    <td title="${esc((x.services||[]).map(s=>s.name||s.sid).join(', '))}">${(x.services||[]).length}</td>
+    <td style="text-align:right">${have.has(x.url)?'<span class="chip">added</span>':`<button class="btn sm primary f-add" onclick="addScanned(this,'${esc(x.url)}')">Add</button>`}</td></tr>`).join('')+'</table>':'';
+}
+async function runFind(k,path,body,busy){
+  const b=$('#'+k+'-go');b.disabled=true;$('#'+k+'-msg').textContent=busy;$('#'+k+'-res').innerHTML='';$('#mi-err').textContent='';
+  try{showFound(k,await api('POST',path,body))}catch(e){$('#'+k+'-msg').textContent='';$('#mi-err').textContent=e.message}
+  b.disabled=false;
+}
+function doScan(){
+  runFind('sc','api/scan',{localaddr:$('#sc-if').value,proto:$('#sc-proto').value,start:$('#sc-start').value,count:+$('#sc-count').value,port:+$('#sc-port').value,seconds:+$('#sc-sec').value},'Listening…');
+}
+function doDiscover(){
+  const sec=+$('#dc-sec').value||5;
+  runFind('dc','api/discover',{localaddr:$('#dc-if').value,seconds:sec},`Listening for ${sec}s, then reading programs…`);
+}
+async function addBulk(urls,close){
+  try{
+    const r=await api('POST','api/inputs/bulk',{name:$('#mi-name').value,urls});
+    if(close) closeM('m-input');
+    if(r.ids.length) sel=r.ids[0];
+    await refresh();
+    toast(`Added ${r.ids.length} input${r.ids.length===1?'':'s'}${r.skipped.length?`, ${r.skipped.length} already existed`:''}`);
+    return r;
+  }catch(e){$('#mi-err').textContent=e.message}
+}
+async function addAllFound(k){
+  const have=new Set(S.inputs.map(i=>i.url)),urls=found[k].map(x=>x.url).filter(u=>!have.has(u));
+  if(!urls.length)return;
+  if(await addBulk(urls,false)){document.querySelectorAll(`#${k}-res .f-add`).forEach(b=>b.outerHTML='<span class="chip">added</span>');$('#'+k+'-msg').textContent=`${found[k].length} found · all added`}
+}
+async function addScanned(btn,url){
+  try{const r=await api('POST','api/inputs',{name:$('#mi-name').value||'',url,enabled:true});btn.outerHTML='<span class="chip">added</span>';sel=r.id;refresh()}
+  catch(e){$('#mi-err').textContent=e.message}
+}
+async function toggleIn(id,on){const i=S.inputs.find(x=>x.id===id);await api('PUT',`api/inputs/${id}`,{...i,status:undefined,enabled:on}).catch(e=>toast(e.message));refresh()}
+async function delIn(id){const i=S.inputs.find(x=>x.id===id),n=S.outputs.filter(o=>o.input_id===id).length;
+  if(!confirm(`Delete input "${i.name}" and its ${n} output(s)?`))return;await api('DELETE',`api/inputs/${id}`).catch(e=>toast(e.message));sel=null;refresh()}
+
+function openOut(id,srcSid){
+  editOut=id;newOut=srcSid??null;$('#mo-err').textContent='';
+  const o=S.outputs.find(x=>x.id===id);
+  if(o){
+    const u=new URL(o.url.replace(/^(udp|rtp):/,'http:'));
+    $('#mo-title').textContent='Edit output';$('#mo-src').textContent=`SID ${o.src_sid}`;
+    $('#mo-name').value=o.name;$('#mo-prov').value=o.provider;
+    $('#mo-sid').value=o.out_sid!==o.src_sid?o.out_sid:'';$('#mo-tsid').value=o.tsid!==o.out_sid?o.tsid:'';
+    $('#mo-proto').value=o.url.slice(0,3);$('#mo-addr').value=u.host;$('#mo-if').innerHTML=ifOpts(u.searchParams.get('localaddr')||'');
+  }else{
+    const i=S.inputs.find(x=>x.id===sel),sv=(i.status?.services||[]).find(x=>x.sid===srcSid)||{};
+    $('#mo-title').textContent='New output';$('#mo-src').textContent=`SID ${srcSid}`;
+    $('#mo-name').value=sv.name||'';$('#mo-prov').value=sv.provider||'';$('#mo-sid').value='';$('#mo-tsid').value='';
+    $('#mo-proto').value=S.settings.auto_proto||'udp';$('#mo-addr').value='';$('#mo-if').innerHTML=ifOpts(S.settings.auto_localaddr||'');
+  }
+  openM('m-out');$('#mo-name').focus();
+}
+async function saveOutput(){
+  const body={name:$('#mo-name').value,provider:$('#mo-prov').value,out_sid:+$('#mo-sid').value||0,tsid:+$('#mo-tsid').value||0,
+    proto:$('#mo-proto').value,addr:$('#mo-addr').value.trim(),localaddr:$('#mo-if').value};
+  try{
+    if(editOut) await api('PUT',`api/outputs/${editOut}`,body);
+    else await api('POST','api/outputs',{...body,input_id:sel,src_sid:newOut});
+    closeM('m-out');await refresh();toast('Output saved');
+  }catch(e){$('#mo-err').textContent=e.message}
+}
+async function toggleOut(id,on){await api('PUT',`api/outputs/${id}`,{enabled:on}).catch(e=>toast(e.message));refresh()}
+async function delOut(id){const o=S.outputs.find(x=>x.id===id);if(!confirm(`Delete output "${o.name}" (${o.url})?`))return;
+  await api('DELETE',`api/outputs/${id}`).catch(e=>toast(e.message));refresh()}
+
+function openSettings(){
+  const s=S.settings;$('#st-err').textContent='';
+  $('#st-group').value=s.auto_group;$('#st-port').value=s.auto_port;$('#st-proto').value=s.auto_proto;$('#st-ttl').value=s.ttl;
+  $('#st-if').innerHTML=ifOpts(s.auto_localaddr);openM('m-set');
+}
+async function saveSettings(){
+  try{await api('PUT','api/settings',{auto_group:$('#st-group').value,auto_port:$('#st-port').value,auto_proto:$('#st-proto').value,auto_localaddr:$('#st-if').value,ttl:$('#st-ttl').value});
+    closeM('m-set');await refresh();toast('Settings saved')}catch(e){$('#st-err').textContent=e.message}
+}
+$('#yr').textContent=new Date().getFullYear();
+start();
+</script>
+</body>
+</html>

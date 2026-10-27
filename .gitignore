@@ -1,0 +1,11 @@
+# secrets
+.env
+
+# build output
+/mpts2spts
+/legacy/tssplit
+
+# runtime data
+*.db
+*.db-shm
+*.db-wal
