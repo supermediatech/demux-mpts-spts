@@ -227,6 +227,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .empty .ic{width:36px;height:36px;stroke-width:1.5;color:var(--line);display:block;margin:0 auto 10px}
 .empty b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
 .bulk{display:flex;gap:10px;align-items:center;padding:12px 18px;background:var(--panel2);border-top:1px solid var(--line);flex-wrap:wrap}
+.wd{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.wd .ic{width:13px;height:13px}
+.wd.down{color:var(--text2)}.wd.down .ic{color:var(--warn);animation:sp 2s linear infinite}
+@media (prefers-reduced-motion:reduce){.wd.down .ic{animation:none}}
 .copy{cursor:pointer;border-radius:5px;padding:1px 3px;margin:-1px -3px}
 .copy:hover{background:var(--chip)}
 .copy .ic{width:13px;height:13px;color:var(--muted);opacity:0;margin-left:4px}
@@ -522,6 +526,16 @@ const statePill=st=>{const m={ok:['ok','check'],nosignal:['warn','alert'],error:
   return `<span class="pill ${m[0]}">${icon(m[1])}${stateTxt[st]||st}</span>`};
 const stype=t=>({1:'TV',2:'Radio',0x11:'HD TV',0x16:'SD TV',0x19:'HD TV',0x1F:'UHD TV',0x0A:'Radio',0x0C:'Data'}[t]||'Type '+t);
 function ifOpts(v){return '<option value="">Any (default route)</option>'+IFS.map(i=>`<option value="${esc(i.addr)}" ${i.addr===v?'selected':''}>${esc(i.name)} — ${esc(i.addr)}</option>`).join('')}
+// "2m 13s" style durations for the watchdog line
+const dur=sec=>{sec=Math.max(0,Math.round(sec));const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),x=sec%60;
+  return d?`${d}d ${h}h`:h?`${h}h ${m}m`:m?`${m}m ${x}s`:`${x}s`};
+// watchdog status for an input: while down, how long and which attempt; after recovery, how many reconnects
+function watchLine(i){
+  const s=i.status||{};if(!i.enabled)return '';
+  if(s.down_since) return `<span class="wd down">${icon('restart')}Down ${dur(Date.now()/1000-s.down_since)} · auto-reconnecting${s.reconnects?` (attempt ${s.reconnects+1})`:''}</span>`;
+  if(s.reconnects) return `<span class="wd" title="last ${new Date(s.last_restart*1000).toLocaleString()}">${icon('restart')}${s.reconnects} auto-reconnect${s.reconnects>1?'s':''}</span>`;
+  return '';
+}
 const emptyState=(ic,title,msg='')=>`<div class="empty">${icon(ic)}<b>${title}</b>${msg}</div>`;
 
 // q holds per-table searches; they survive the periodic re-render
@@ -607,7 +621,7 @@ function render(){
   $('#inlist').innerHTML=list.map(i=>{
     const st=stateOf(i),n=S.outputs.filter(o=>o.input_id===i.id).length;
     return `<div class="initem ${i.id===sel&&!g?'sel':''}" onclick="pick(${i.id})">
-      <span class="dot ${st}" title="${stateTxt[st]||st}"></span><span class="nm">${esc(i.name)}</span>
+      <span class="dot ${st}" title="${stateTxt[st]||st}${i.status?.down_since?' · down '+dur(Date.now()/1000-i.status.down_since)+', auto-reconnecting':''}"></span><span class="nm">${esc(i.name)}</span>
       <span class="rate">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'off'}</span>
       <span></span><span class="u muted mono">${esc(i.url)} · ${n} out</span>
       ${i.enabled?`<span></span>${spark('side'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps')}`:''}</div>`}).join('')||emptyState('inbox',S.inputs.length?'No match':'No inputs yet');
@@ -666,7 +680,7 @@ function overview(){
     kpi('mem','Memory',gb(y.mem_used||0).split(' ')[0],gb(y.mem_used||0).split(' ')[1]+' / '+gb(y.mem_total||0),meterHTML(memP)+`<div class="sub"><span>${memP.toFixed(0)}% used</span><span>app ${gb(y.app_rss||0)}</span></div>`);
   const grid=S.inputs.map(i=>{const st=stateOf(i),s=i.status||{},n=S.outputs.filter(o=>o.input_id===i.id).length;
     return `<div class="intile" onclick="if(!event.target.closest('.spark'))pick(${i.id})"><div class="t"><span class="dot ${st}"></span><b>${esc(i.name)}</b>${statePill(st)}</div>
-      <div class="u mono muted">${esc(i.url)}</div>
+      <div class="u mono muted">${esc(i.url)}</div>${watchLine(i)}
       ${i.enabled?spark('g'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):'<div class="spark" style="height:34px"></div>'}
       <div class="f"><span><b>${(s.services||[]).length}</b> programs · <b>${n}</b> outputs</span><span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> Mbps</span></div></div>`}).join('');
   return head+`<div class="kpis">${tiles}</div>
@@ -713,7 +727,8 @@ function inputView(i){
       <div class="hero"><span class="tv">${icon('in','lg')}</span>
         <div style="min-width:0"><h1>${esc(i.name)} ${statePill(st)}</h1>
           <div class="url mono"><span class="copy" title="Copy" onclick="copy('${esc(i.url)}')">${esc(i.url)}${icon('copy')}</span></div>
-          ${s.error?`<div class="err-msg" style="margin-top:6px">${esc(s.error)}</div>`:''}</div>
+          ${s.error?`<div class="err-msg" style="margin-top:6px">${esc(s.error)}</div>`:''}
+          ${watchLine(i)?`<div style="margin-top:6px">${watchLine(i)}</div>`:''}</div>
         <div class="acts"><label class="row" style="gap:8px;color:var(--text2);font-size:13px">${i.enabled?'Enabled':'Disabled'}<span class="switch"><input type="checkbox" ${i.enabled?'checked':''} onchange="toggleIn(${i.id},this.checked)"><span></span></span></label>
           <button class="btn sm" onclick="openInput(${i.id})">${icon('edit')}Edit</button><button class="btn sm danger" onclick="delIn(${i.id})">${icon('trash')}Delete</button></div></div>
       <div class="hero-kpis">

@@ -79,6 +79,22 @@ Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), 
 - **Tables sort** when you click a column header; click it again to reverse the order. Each browser remembers the order you chose.
 - **Theme**: Light, Auto (follows the OS) or Dark. Use the switch in the top bar, in Settings or on the sign-in page; each browser remembers its choice.
 
+## Automatic recovery
+
+Every input has its own watchdog, so nobody has to restart anything by hand.
+
+- **Source goes silent:** after 3 s the input shows *No signal*. After 5 s it closes the socket and re-joins from scratch: a fresh IGMP join, and PAT/PMT/SDT are read again. It retries after 1 s, 2 s, 4 s and so on, up to every 30 s, until the source returns. The backoff resets as soon as data flows again. Outputs resume by themselves, with the same addresses, service IDs and names.
+- **Input can't be opened** (e.g. the interface is down or its IP was removed): it retries with the same backoff.
+- **Output socket breaks** (e.g. the egress interface went away): it is reopened automatically.
+- **Internal error in one input:** only that input restarts. The other streams and the web UI keep running. If the whole process ever dies, systemd restarts it within 2 s (`Restart=always`).
+- **What you see:** the UI shows how long a source has been down, the current reconnect attempt, and the total number of automatic reconnects. The log records each event:
+  ```
+  input 3 udp://239.2.2.2:1234: signal lost
+  input 3 udp://239.2.2.2:1234: no signal; reconnecting in 1s (attempt 1)
+  input 3 udp://239.2.2.2:1234: signal restored after 16s
+  ```
+  Use `journalctl -u mpts2spts -f` to follow the log.
+
 ## Stable output across restarts
 
 Each output's identity is stored in SQLite when you create it: service ID, TS ID, ONID, program name, provider, service type and destination. On every start the app rebuilds PAT and SDT from these stored values. Version numbers are derived from the content, so the PSI comes out byte-identical after a restart. The PMT is the source PMT with only `program_number` changed, and ES PIDs pass through unchanged. If the source later renames a service, the output keeps its stored name until you edit it.

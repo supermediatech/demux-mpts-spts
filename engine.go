@@ -2,9 +2,12 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"hash/fnv"
 	"log"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -16,7 +19,12 @@ import (
 const (
 	rxBatch = 64
 	rxSize  = 2048
-	pace    = 2 * time.Millisecond
+
+	// Watchdog: an input silent for noSignalAfter is closed and re-joined
+	// (fresh IGMP join, PSI re-read). Retries back off up to maxBackoff.
+	noSignalAfter = 5 * time.Second
+	maxBackoff    = 30 * time.Second
+	pace          = 2 * time.Millisecond
 
 	kindNone = 0
 	kindPAT  = 1
@@ -106,6 +114,10 @@ type InputStatus struct {
 	Services []ServiceInfo       `json:"services"`
 	Outputs  map[int64]OutStatus `json:"-"`
 	Since    time.Time           `json:"-"`
+
+	Reconnects  int   `json:"reconnects"`             // automatic restarts so far
+	DownSince   int64 `json:"down_since,omitempty"`   // unix time the signal was lost
+	LastRestart int64 `json:"last_restart,omitempty"` // unix time of the last reconnect
 }
 
 type worker struct {
@@ -140,7 +152,18 @@ type worker struct {
 	onSDTf  func([]byte)
 	lastPkt time.Time
 	rtpTS   uint32
+
+	// watchdog state, owned by the loop goroutine (which also runs run)
+	runStart    time.Time
+	sawData     bool
+	cfgs        []OutCfg  // last applied output config, reused on reconnect
+	lastStack   time.Time // rate-limits panic stack traces in the log
+	reconnects  int
+	downSince   time.Time
+	lastRestart time.Time
 }
+
+var errNoSignal = errors.New("no signal")
 
 func newWorker(id int64, su StreamURL, outs []OutCfg) *worker {
 	w := &worker{id: id, url: su, done: make(chan struct{})}
@@ -163,26 +186,73 @@ func (w *worker) snapshot() InputStatus {
 }
 
 func (w *worker) setError(err error) {
+	if w.downSince.IsZero() {
+		w.downSince = time.Now()
+	}
+	st := InputStatus{State: "error", Error: err.Error(), Since: time.Now()}
+	if err == errNoSignal {
+		st = w.snapshot() // keep the last known programs on screen
+		st.State, st.Error, st.Kbps = "nosignal", "", 0
+	}
+	w.stampWatchdog(&st)
 	w.statusMu.Lock()
-	w.status = InputStatus{State: "error", Error: err.Error(), Since: time.Now()}
+	w.status = st
 	w.statusMu.Unlock()
 }
 
+func (w *worker) stampWatchdog(st *InputStatus) {
+	st.Reconnects = w.reconnects
+	if !w.downSince.IsZero() {
+		st.DownSince = w.downSince.Unix()
+	}
+	if !w.lastRestart.IsZero() {
+		st.LastRestart = w.lastRestart.Unix()
+	}
+}
+
+// loop keeps the input alive: it reruns run after any failure, signal loss
+// or panic, with exponential backoff that resets once data flows again.
 func (w *worker) loop() {
 	defer close(w.done)
+	fails := 0
 	for !w.stopped.Load() {
-		err := w.run()
+		err := w.safeRun()
 		if w.stopped.Load() {
 			break
 		}
-		if err != nil {
-			log.Printf("input %d %s: %v", w.id, w.url, err)
-			w.setError(err)
+		if w.sawData {
+			fails = 0
 		}
-		for i := 0; i < 50 && !w.stopped.Load(); i++ {
+		fails++
+		delay := min(time.Second<<min(fails-1, 5), maxBackoff)
+		if err == nil {
+			err = errors.New("stopped unexpectedly")
+		}
+		if w.id != 0 { // probes (scan/discover) are short-lived; stay quiet
+			log.Printf("input %d %s: %v; reconnecting in %s (attempt %d)", w.id, w.url, err, delay, w.reconnects+1)
+		}
+		w.setError(err)
+		for t := time.Now(); time.Since(t) < delay && !w.stopped.Load(); {
 			time.Sleep(100 * time.Millisecond)
 		}
+		w.reconnects++
+		w.lastRestart = time.Now()
 	}
+}
+
+// safeRun turns a panic in one input into a restart of that input only.
+func (w *worker) safeRun() (err error) {
+	w.sawData = false
+	defer func() {
+		if r := recover(); r != nil {
+			if time.Since(w.lastStack) > 10*time.Minute { // full trace at most every 10 min
+				w.lastStack = time.Now()
+				log.Printf("input %d %s: panic: %v\n%s", w.id, w.url, r, debug.Stack())
+			}
+			err = fmt.Errorf("internal error: %v", r)
+		}
+	}()
+	return w.run()
 }
 
 func (w *worker) reset() {
@@ -221,10 +291,14 @@ func (w *worker) run() error {
 			}
 		}
 	}()
-	w.applyConfig(*w.pending.Swap(nil))
+	if p := w.pending.Swap(nil); p != nil {
+		w.cfgs = *p
+	}
+	w.applyConfig(w.cfgs)
 
 	rx := newRxRing(rxBatch, rxSize)
 	lastTick, lastSDT := time.Now(), time.Time{}
+	w.runStart, w.sawData = lastTick, false
 	w.publish(0)
 
 	for !w.stopped.Load() {
@@ -239,9 +313,17 @@ func (w *worker) run() error {
 		}
 		if n > 0 {
 			w.lastPkt = now
+			if !w.sawData {
+				w.sawData = true
+				if !w.downSince.IsZero() && w.id != 0 {
+					log.Printf("input %d %s: signal restored after %s", w.id, w.url, now.Sub(w.downSince).Round(time.Second))
+				}
+				w.downSince = time.Time{}
+			}
 		}
 		if p := w.pending.Swap(nil); p != nil {
-			w.applyConfig(*p)
+			w.cfgs = *p
+			w.applyConfig(w.cfgs)
 		}
 		if now.Sub(lastSDT) >= 2*time.Second {
 			lastSDT = now
@@ -262,9 +344,57 @@ func (w *worker) run() error {
 		if dt := now.Sub(lastTick); dt >= time.Second {
 			lastTick = now
 			w.publish(dt.Seconds())
+			w.healTx()
+			// watchdog: silence since the last packet (or since opening)
+			last := w.lastPkt
+			if last.Before(w.runStart) {
+				last = w.runStart
+			}
+			if w.id != 0 && now.Sub(last) >= noSignalAfter {
+				if w.downSince.IsZero() {
+					w.downSince = last
+				}
+				return errNoSignal
+			}
 		}
 	}
 	return nil
+}
+
+// healTx reopens output sockets that failed to open or keep failing to send
+// (e.g. an output interface went down and came back).
+func (w *worker) healTx() {
+	for key, t := range w.txs {
+		if t.fd >= 0 && t.err == nil {
+			t.bad = 0
+			continue
+		}
+		if t.bad++; t.fd >= 0 && t.bad < 5 {
+			continue
+		}
+		ttl := 16
+		for _, o := range w.outs {
+			if o.tx == t {
+				ttl = o.cfg.TTL
+				break
+			}
+		}
+		nt, err := openTx(key, ttl)
+		if err != nil {
+			t.err, t.bad = err, 0
+			continue
+		}
+		if t.fd >= 0 {
+			t.close()
+		}
+		log.Printf("input %d: output socket on %q reopened", w.id, key)
+		w.txs[key] = nt
+		for _, o := range w.outs {
+			if o.tx == t {
+				o.tx = nt
+			}
+		}
+	}
 }
 
 func (w *worker) flushTx() {
@@ -637,12 +767,24 @@ func (w *worker) publish(dt float64) {
 		total += w.cnt[pid] - w.prevCnt[pid]
 	}
 	st.Kbps = rate(total)
-	switch {
-	case w.lastPkt.IsZero() || time.Since(w.lastPkt) > 3*time.Second:
-		st.State = "nosignal"
-	default:
-		st.State = "ok"
+	// silence is measured from the last packet, or from (re)opening if later
+	last := w.lastPkt
+	if last.Before(w.runStart) {
+		last = w.runStart
 	}
+	switch {
+	case !w.lastPkt.IsZero() && time.Since(w.lastPkt) <= 3*time.Second:
+		st.State = "ok"
+	case time.Since(last) <= 3*time.Second && w.downSince.IsZero():
+		st.State = "starting" // just opened, give the source a moment
+	default:
+		st.State = "nosignal"
+		if w.downSince.IsZero() && w.id != 0 {
+			w.downSince = last
+			log.Printf("input %d %s: signal lost", w.id, w.url)
+		}
+	}
+	w.stampWatchdog(&st)
 	for _, pr := range w.progs {
 		si := ServiceInfo{SID: pr.sid, PMTPID: pr.pmtPID, PCRPID: pr.pcrPID, Type: 1,
 			Streams: append([]StreamInfo(nil), pr.streams...)}

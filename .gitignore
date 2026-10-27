@@ -12,3 +12,6 @@
 
 # release packages
 /dist/
+
+# local planning notes
+plan.MD

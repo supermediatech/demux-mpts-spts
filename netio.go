@@ -182,6 +182,7 @@ type txSock struct {
 	slab [][]byte
 	n    int
 	err  error
+	bad  int // consecutive seconds in error, for healTx
 }
 
 const txQueue = 256
