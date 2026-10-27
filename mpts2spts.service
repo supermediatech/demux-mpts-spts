@@ -1,15 +1,30 @@
 [Unit]
-Description=MPTS to SPTS splitter
+Description=MPTS to SPTS splitter (Super Media Tech)
+Documentation=https://www.supermediatech.com
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=/opt/mpts2spts
-ExecStart=/opt/mpts2spts/mpts2spts -listen :8080 -db /opt/mpts2spts/mpts2spts.db -env /opt/mpts2spts/.env
+User=mpts2spts
+Group=mpts2spts
+Environment=LISTEN=:8080
+EnvironmentFile=-/etc/mpts2spts/mpts2spts.env
+ExecStart=/opt/mpts2spts/mpts2spts -listen ${LISTEN} -db /var/lib/mpts2spts/mpts2spts.db -env /etc/mpts2spts/mpts2spts.env
 Restart=always
 RestartSec=2
-AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+
+# NET_RAW: interface binding + Discover; NET_ADMIN: large socket buffers;
+# NET_BIND_SERVICE: allows LISTEN=:80 if wanted.
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+StateDirectory=mpts2spts
+ReadWritePaths=/var/lib/mpts2spts
 LimitNOFILE=65536
+Nice=-5
 
 [Install]
 WantedBy=multi-user.target

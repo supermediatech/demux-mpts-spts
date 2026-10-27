@@ -2,10 +2,47 @@
 
 Splits multicast MPTS inputs into single-program SPTS outputs (UDP or RTP), managed from a web UI. It ships as one Go binary with the UI embedded and keeps its configuration in SQLite.
 
-## Build & run
+## Install (release packages)
+
+Build the packages with `make dist` (or `make dist VERSION=1.2.0`). That produces, in `dist/`:
+
+| File | For |
+|---|---|
+| `mpts2spts_<ver>_amd64.deb` | Debian / Ubuntu |
+| `mpts2spts_<ver>_amd64.tar.gz` | any x86-64 Linux with systemd |
+| `mpts2spts_<ver>_amd64.sha256` | checksums |
+
+The binary is fully static, so it has no runtime dependencies and needs no libc version match.
+
+**Debian/Ubuntu**
+```sh
+sudo apt install ./mpts2spts_1.0.0_amd64.deb
+```
+
+**Other distros**
+```sh
+tar xzf mpts2spts_1.0.0_amd64.tar.gz && cd mpts2spts_1.0.0_amd64
+sudo ./install.sh
+```
+
+Either way, the installer creates the `mpts2spts` system user, installs the systemd service, and enables and starts it. It then prints the web URL and a randomly generated `admin` password.
+
+| Path | What |
+|---|---|
+| `/opt/mpts2spts/mpts2spts` | binary |
+| `/etc/mpts2spts/mpts2spts.env` | login (`USERNAME`, `PASSWORD`) and `LISTEN` address |
+| `/var/lib/mpts2spts/mpts2spts.db` | configuration database |
+
+After editing the env file, run `sudo systemctl restart mpts2spts`. Logs: `journalctl -u mpts2spts -f`.
+
+Upgrading means installing a newer package over the old one; the configuration and database are kept. To remove it, run `sudo apt remove mpts2spts` (keeps data) or `sudo apt purge mpts2spts` (deletes data). For a tarball install, use `sudo /opt/mpts2spts/uninstall.sh [--purge]`.
+
+The service runs unprivileged with only `CAP_NET_RAW` (interface binding, Discover), `CAP_NET_ADMIN` (large socket buffers) and `CAP_NET_BIND_SERVICE`.
+
+## Development
 
 ```sh
-go build -ldflags="-s -w" -o mpts2spts .
+make            # static ./mpts2spts
 ./mpts2spts -listen :8080 -db mpts2spts.db -env .env
 ```
 
@@ -16,11 +53,7 @@ USERNAME=admin
 PASSWORD=change-me
 ```
 
-Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), `-pprof` (debug profiler address, off by default).
-
-For multicast on several interfaces, run as root or give the binary `CAP_NET_RAW` so `SO_BINDTODEVICE` works: `sudo setcap cap_net_raw+ep mpts2spts`. Without it, interface selection still works through `IP_MULTICAST_ALL=0` and the per-interface join.
-
-Systemd: see `mpts2spts.service`.
+Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), `-version`, `-pprof` (debug profiler address, off by default). To use Discover when running by hand, run `sudo setcap cap_net_raw,cap_net_admin+ep mpts2spts` again after each build.
 
 ## Usage
 

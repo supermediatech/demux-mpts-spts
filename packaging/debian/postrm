@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
+# Configuration and the database are kept on remove; purge deletes them.
+if [ "$1" = "purge" ]; then
+    rm -rf /etc/mpts2spts /var/lib/mpts2spts
+    userdel mpts2spts >/dev/null 2>&1 || true
+fi

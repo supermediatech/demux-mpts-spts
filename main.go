@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -19,6 +20,9 @@ import (
 	"syscall"
 	"time"
 )
+
+// version is set at build time: -ldflags "-X main.version=1.2.3"
+var version = "dev"
 
 func loadEnv(path string) {
 	f, err := os.Open(path)
@@ -47,7 +51,12 @@ func main() {
 	dbPath := flag.String("db", "mpts2spts.db", "SQLite database file")
 	envPath := flag.String("env", ".env", "file with USERNAME and PASSWORD")
 	pprofAddr := flag.String("pprof", "", "debug: serve Go profiler on this address (e.g. 127.0.0.1:6060)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("mpts2spts", version)
+		return
+	}
 	log.SetFlags(log.LstdFlags | log.Lmsgprefix)
 
 	loadEnv(*envPath)
@@ -71,7 +80,7 @@ func main() {
 	}
 	srv := &http.Server{Addr: *listen, Handler: app.Routes(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
-		log.Printf("web UI on %s", *listen)
+		log.Printf("mpts2spts %s, web UI on %s", version, *listen)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
