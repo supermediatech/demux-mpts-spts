@@ -2,6 +2,8 @@
 
 Splits multicast MPTS inputs into single-program SPTS outputs (UDP or RTP), managed from a web UI. It ships as one Go binary with the UI embedded and keeps its configuration in SQLite.
 
+![Dashboard](dashboard-screenshot.png)
+
 ## Install (release packages)
 
 Ready-made packages for **amd64** and **arm64** are on the [Releases page](https://github.com/supermediatech/demux-mpts-spts/releases). Pushing a `v*` tag builds and publishes them through GitHub Actions (`.github/workflows/release.yml`).
@@ -73,7 +75,9 @@ Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), 
 - **Start all / Stop all** (top bar) enable or disable every input. This is saved, so it persists across restarts. **Restart all** reopens every socket and leaves the configuration unchanged.
 - On each outputs table, the **All** toggle enables or disables every output shown, and **Delete all** removes every output shown. Both act on the current search results, so you can search first and then act on a subset.
 - **Search**: the box in the top bar searches inputs, programs and outputs together. Each table also has its own search box, and the sidebar has an input filter.
-- The top bar shows host CPU, host RAM and the app's own CPU (% of one core) and memory.
+- The top bar shows host CPU, host RAM and the app's own CPU (% of one core) and memory. The dashboard adds live KPI tiles and bitrate/CPU sparklines; hover over a sparkline to read its values.
+- **Tables sort** when you click a column header; click it again to reverse the order. Each browser remembers the order you chose.
+- **Theme**: Light, Auto (follows the OS) or Dark. Use the switch in the top bar, in Settings or on the sign-in page; each browser remembers its choice.
 
 ## Stable output across restarts
 

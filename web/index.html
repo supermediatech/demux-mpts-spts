@@ -4,155 +4,361 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MPTS → SPTS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M7 16h6l4-6h8M13 16l4 6h8' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+// apply the saved theme before first paint (no flash)
+(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}})();
+</script>
 <style>
+/* ---------- tokens ---------- */
 :root{
-  --bg:#f4f5f7;--panel:#fff;--panel2:#f9fafb;--line:#e3e6ea;--text:#1d2329;--muted:#6b7480;
-  --accent:#2563eb;--accent-h:#1d4ed8;--ok:#16a34a;--warn:#d97706;--err:#dc2626;--chip:#eef2f7;
-  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.06);
+  color-scheme:light;
+  --bg:#f3f5f9;--panel:#fff;--panel2:#f8fafc;--line:#e4e8ef;--line2:#eef1f6;
+  --text:#0f172a;--text2:#475569;--muted:#64748b;
+  --accent:#2563eb;--accent-h:#1d4ed8;--accent-soft:#e8effd;--on-accent:#fff;
+  --series:#2a78d6;--series-wash:rgba(42,120,214,.10);
+  --good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;
+  --k-video:#2a78d6;--k-audio:#eb6834;--k-sub:#1baf7a;--k-ttx:#eda100;--k-other:#6250d6;
+  --chip:#f1f4f8;--hover:#f5f7fb;--overlay:rgba(15,23,42,.45);
+  --shadow-sm:0 1px 2px rgba(15,23,42,.06);
+  --shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px -8px rgba(15,23,42,.10);
+  --shadow-lg:0 24px 64px -12px rgba(15,23,42,.35);
+  --radius:12px;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#0f1216;--panel:#171b21;--panel2:#1c2128;--line:#2a313a;--text:#e5e9ee;--muted:#8a94a0;
-  --accent:#3b82f6;--accent-h:#60a5fa;--chip:#232a33;--shadow:0 1px 2px rgba(0,0,0,.4);
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark;
+  --bg:#0a0e15;--panel:#121923;--panel2:#161f2b;--line:#222d3d;--line2:#1b2532;
+  --text:#e6edf5;--text2:#b4c0cf;--muted:#8592a4;
+  --accent:#3b82f6;--accent-h:#60a5fa;--accent-soft:#15253d;
+  --series:#3987e5;--series-wash:rgba(57,135,229,.14);
+  --k-video:#3987e5;--k-audio:#d95926;--k-sub:#199e70;--k-ttx:#c98500;--k-other:#9085e9;
+  --chip:#1b2532;--hover:#18212d;--overlay:rgba(0,0,0,.6);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -8px rgba(0,0,0,.5);--shadow-lg:0 24px 64px -12px rgba(0,0,0,.7);
 }}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0a0e15;--panel:#121923;--panel2:#161f2b;--line:#222d3d;--line2:#1b2532;
+  --text:#e6edf5;--text2:#b4c0cf;--muted:#8592a4;
+  --accent:#3b82f6;--accent-h:#60a5fa;--accent-soft:#15253d;
+  --series:#3987e5;--series-wash:rgba(57,135,229,.14);
+  --k-video:#3987e5;--k-audio:#d95926;--k-sub:#199e70;--k-ttx:#c98500;--k-other:#9085e9;
+  --chip:#1b2532;--hover:#18212d;--overlay:rgba(0,0,0,.6);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -8px rgba(0,0,0,.5);--shadow-lg:0 24px 64px -12px rgba(0,0,0,.7);
+}
+
+/* ---------- base ---------- */
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-button,input,select{font:inherit;color:inherit}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
-.muted{color:var(--muted)}
-header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
-header .stats{display:flex;gap:18px;margin-left:12px}
-header .stats div b{font-variant-numeric:tabular-nums}
-header .sp{flex:1}
-.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
-.btn:hover{background:var(--panel2)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{background:var(--accent-h)}
-.btn.danger{color:var(--err)}
-.btn.sm{padding:3px 9px;font-size:12.5px}
-.btn:disabled{opacity:.5;cursor:default}
-.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 96px)}
-aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
-aside .top{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
-aside .top input{flex:1;min-width:0}
-.inlist{overflow:auto;flex:1}
-.initem{padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;display:grid;grid-template-columns:12px 1fr auto;gap:2px 10px;align-items:center}
-.initem:hover{background:var(--panel2)}
-.initem.sel{background:var(--chip);box-shadow:inset 3px 0 0 var(--accent)}
+.muted{color:var(--muted)}.text2{color:var(--text2)}
+.ic{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.ic.lg{width:20px;height:20px}
+.sp{flex:1}
+.row{display:flex;gap:8px;align-items:center}
+.tnum{font-variant-numeric:tabular-nums}
+::selection{background:var(--accent-soft)}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:9px;cursor:pointer;white-space:nowrap;font-weight:500;transition:background .12s,border-color .12s,box-shadow .12s;box-shadow:var(--shadow-sm)}
+.btn:hover{background:var(--hover);text-decoration:none}
+.btn:focus-visible,.ibtn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-h);border-color:var(--accent-h)}
+.btn.danger{color:var(--crit)}
+.btn.danger:hover{background:color-mix(in srgb,var(--crit) 10%,var(--panel));border-color:color-mix(in srgb,var(--crit) 35%,var(--line))}
+.btn.ghost{background:transparent;box-shadow:none;border-color:transparent}
+.btn.sm{padding:4px 10px;font-size:12.5px;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:default}
+.ibtn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;border:1px solid transparent;background:none;cursor:pointer;color:var(--text2)}
+.ibtn:hover{background:var(--hover);color:var(--text);border-color:var(--line)}
+.ibtn.sm{width:28px;height:28px;border-radius:7px}
+.ibtn.danger:hover{color:var(--crit)}
+.seg{display:inline-flex;background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:2px;gap:2px}
+.seg button{display:inline-flex;align-items:center;gap:6px;border:none;background:none;padding:5px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-weight:500;white-space:nowrap}
+.seg button:hover{color:var(--text);background:var(--panel)}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--text);box-shadow:var(--shadow-sm)}
+.seg.icons button{padding:5px 7px}
+input[type=text],input[type=password],input[type=number],select,textarea{border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 10px;outline:none;transition:border-color .12s,box-shadow .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+.field-ic{position:relative;display:flex;align-items:center}
+.field-ic>.ic{position:absolute;left:10px;color:var(--muted);pointer-events:none}
+.field-ic>input{padding-left:32px;width:100%}
+.field-ic kbd{position:absolute;right:8px;font:11px ui-monospace,monospace;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;background:var(--panel2)}
+.switch{position:relative;width:36px;height:20px;display:inline-block;flex:none}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;background:var(--line);border-radius:20px;transition:.15s}
+.switch span:before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked+span{background:var(--good)}
+.switch input:checked+span:before{transform:translateX(16px)}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.switch input:disabled{cursor:default}.switch input:disabled+span{opacity:.5}
+input[type=checkbox]:not(.switch input){accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+
+/* ---------- status ---------- */
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px 2px 7px;border-radius:20px;font-size:12px;font-weight:500;background:var(--chip);color:var(--text);white-space:nowrap}
+.pill .ic{width:13px;height:13px;stroke-width:2.5}
+.pill.ok{background:color-mix(in srgb,var(--good) 13%,var(--panel))}.pill.ok .ic{color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 18%,var(--panel))}.pill.warn .ic{color:color-mix(in srgb,var(--warn) 75%,var(--text))}
+.pill.err{background:color-mix(in srgb,var(--crit) 13%,var(--panel))}.pill.err .ic{color:var(--crit)}
+.pill.off .ic{color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;flex:none;position:relative}
+.dot.ok{background:var(--good)}.dot.nosignal{background:var(--warn)}.dot.error{background:var(--crit)}.dot.off{background:var(--line)}
+.dot.ok:after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--good);opacity:0;animation:pulse 2.4s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.6);opacity:0}}
+@media (prefers-reduced-motion:reduce){.dot.ok:after{animation:none}}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:6px;background:var(--chip);font-size:11.5px;margin:1px 3px 1px 0;color:var(--text2);white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:2px;background:var(--k-other)}
+.chip.video i{background:var(--k-video)}.chip.audio i{background:var(--k-audio)}.chip.subtitle i{background:var(--k-sub)}.chip.teletext i{background:var(--k-ttx)}
+.count{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600}
+
+/* ---------- layout ---------- */
+#app{display:none;min-height:100vh;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;padding-right:6px}
+.brand b{display:block;font-size:15px;letter-spacing:.2px;line-height:1.2;white-space:nowrap}
+.brand small{display:block;font-size:11.5px;color:var(--muted);line-height:1.2}
+.brand:hover b{color:var(--accent)}
+.logo-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#2563eb,#06b6d4);box-shadow:0 4px 12px -2px rgba(37,99,235,.45)}
+.logo-mark svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.topbar .gsearch{width:300px}
+.sysbar{display:flex;gap:6px}
+.syspill{display:flex;align-items:center;gap:7px;white-space:nowrap;padding:5px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);font-size:12.5px;color:var(--text2)}
+.syspill b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.syspill .meter{width:44px}
+.layout{display:grid;grid-template-columns:300px 1fr;flex:1;min-height:0}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:57px;height:calc(100vh - 57px)}
+aside .hd{padding:14px 14px 10px;display:flex;align-items:center;gap:8px}
+aside .hd h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+aside .flt{padding:0 14px 12px;border-bottom:1px solid var(--line)}
+.inlist{overflow:auto;flex:1;padding:6px}
+.initem{padding:9px 10px;border-radius:10px;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;margin-bottom:2px;border:1px solid transparent}
+.initem:hover{background:var(--hover)}
+.initem.sel{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
 .initem .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.initem .u{grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
-.dot.ok{background:var(--ok)}.dot.nosignal{background:var(--warn)}.dot.error{background:var(--err)}.dot.off{background:var(--line)}
-main{padding:20px;overflow:auto}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);margin-bottom:18px}
-.card>.hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.card>.hd h2{font-size:15px;margin:0;font-weight:650}
-.card>.hd .sp{flex:1}
-.meta{display:flex;gap:22px;padding:12px 16px;flex-wrap:wrap}
-.meta div span{display:block;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.initem .rate{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
+.initem .u{grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
+.initem .spark{grid-column:2/4;height:22px;margin-top:4px}
+main{padding:22px 26px 30px;min-width:0}
+footer{padding:12px 24px;border-top:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* ---------- page pieces ---------- */
+.page-hd{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.page-hd h1{margin:0;font-size:22px;letter-spacing:-.2px}
+.page-hd p{margin:2px 0 0;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.card>.hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card>.hd h2{font-size:15px;margin:0;font-weight:650;display:flex;align-items:center;gap:8px}
+.card>.hd h2 .ic{color:var(--muted)}
+.tsearch{width:210px}
+.tsearch input{padding-top:5px;padding-bottom:5px;font-size:13px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:20px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.tile .lbl{display:flex;align-items:center;gap:7px;color:var(--text2);font-size:12.5px;font-weight:500}
+.tile .lbl .ic{color:var(--muted)}
+.tile .val{font-size:26px;font-weight:650;letter-spacing:-.3px;line-height:1.15}
+.tile .val small{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px;letter-spacing:0}
+.tile .sub{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tile .sub span{display:inline-flex;align-items:center;gap:5px}
+.tile .spark{height:40px;margin-top:2px}
+
+.meter{height:6px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--series) 18%,var(--panel))}
+.meter i{display:block;height:100%;border-radius:3px;background:var(--series);transition:width .4s}
+.meter.warn{background:color-mix(in srgb,var(--warn) 22%,var(--panel))}.meter.warn i{background:var(--warn)}
+.meter.err{background:color-mix(in srgb,var(--crit) 18%,var(--panel))}.meter.err i{background:var(--crit)}
+
+/* sparkline: one series, 2px line, 10% wash, end dot with surface ring */
+.spark{position:relative;width:100%;outline:none;cursor:crosshair}
+.spark svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.spark .area{fill:var(--series-wash);stroke:none}
+.spark .line{fill:none;stroke:var(--series);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.spark .end,.spark .xd{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--series);box-shadow:0 0 0 2px var(--panel)}
+.spark .xh{position:absolute;top:0;bottom:0;width:1px;background:var(--line);display:none}
+.spark .xd{display:none}
+.spark.hov .xh,.spark.hov .xd{display:block}
+.spark.hov .end{opacity:.35}
+.spark.nodata:before{content:"collecting…";position:absolute;inset:0;display:grid;place-items:center;font-size:11.5px;color:var(--muted)}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:6px 10px;font-size:12px;display:none;white-space:nowrap}
+#tip b{display:block;font-size:13.5px;color:var(--text)}
+#tip span{color:var(--muted)}
+#tip .key{display:inline-block;width:12px;height:2px;background:var(--series);vertical-align:middle;margin-right:6px;border-radius:1px}
+
+.ingrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:16px}
+.intile{border:1px solid var(--line);border-radius:11px;padding:12px 14px;cursor:pointer;background:var(--panel2);display:flex;flex-direction:column;gap:6px;transition:border-color .12s,transform .12s,box-shadow .12s;min-width:0}
+.intile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:var(--shadow);transform:translateY(-1px)}
+.intile .t{display:flex;align-items:center;gap:8px}
+.intile .t b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.intile .u{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
+.intile .spark{height:34px}
+.intile .f{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.intile .f b{color:var(--text);font-weight:600}
+
+.hero{padding:18px 20px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.hero .tv{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
+.hero h1{margin:0;font-size:20px;letter-spacing:-.2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hero .url{display:inline-flex;align-items:center;gap:6px;margin-top:4px;color:var(--text2)}
+.hero .acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hero-kpis{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:0}
+.hero-kpis>div{padding:14px 20px;border-right:1px solid var(--line2);min-width:0}
+.hero-kpis>div:last-child{border-right:none}
+.hero-kpis span{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.hero-kpis b{font-size:19px;font-weight:650}
+.hero-kpis .spark{height:30px;margin-top:6px}
+
 table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
-th{font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;background:var(--panel2)}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line2);vertical-align:middle;white-space:nowrap}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;background:var(--panel2);position:sticky;top:0;border-bottom-color:var(--line)}
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--text)}
+th.sortable .arr{display:inline-block;margin-left:5px;opacity:.35;font-size:10px}
+th.sortable.on{color:var(--text)}th.sortable.on .arr{opacity:1;color:var(--accent)}
+tbody tr{transition:background .1s}
+tbody tr:hover{background:var(--hover)}
 tr:last-child td{border-bottom:none}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-.chip{display:inline-block;padding:1px 7px;border-radius:10px;background:var(--chip);font-size:11.5px;margin:1px 2px 1px 0}
-.chip.video{color:#7c3aed}.chip.audio{color:#0891b2}.chip.ok{color:var(--ok)}.chip.err{color:var(--err)}.chip.warn{color:var(--warn)}
-.empty{padding:40px;text-align:center;color:var(--muted)}
-.bulk{display:flex;gap:8px;align-items:center;padding:10px 16px;background:var(--panel2);border-top:1px solid var(--line);flex-wrap:wrap}
-textarea{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 9px;outline:none;resize:vertical;width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:inherit}
-textarea:focus{border-color:var(--accent)}
-input[type=text],input[type=password],input[type=number],select{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 9px;outline:none}
-input:focus,select:focus{border-color:var(--accent)}
-.switch{position:relative;width:34px;height:19px;display:inline-block}
-.switch input{display:none}
-.switch span{position:absolute;inset:0;background:var(--line);border-radius:20px;cursor:pointer;transition:.15s}
-.switch span:before{content:"";position:absolute;width:15px;height:15px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s}
-.switch input:checked+span{background:var(--ok)}
-.switch input:checked+span:before{transform:translateX(15px)}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding-top:8vh;z-index:20}
-.modal-bg.show{display:flex}
-.modal{background:var(--panel);border-radius:12px;width:min(620px,94vw);max-height:84vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
-.modal .hd h3{margin:0;font-size:15px;flex:1}
-.modal .bd{padding:16px 18px}
-.modal .ft{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
-.form{display:grid;grid-template-columns:150px 1fr;gap:10px 14px;align-items:center}
-.form label{color:var(--muted);font-size:13px}
+.tablewrap{overflow:auto}
+.ratecell{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.ratecell .meter{width:70px;height:5px}
+.empty{padding:44px 20px;text-align:center;color:var(--muted)}
+.empty .ic{width:36px;height:36px;stroke-width:1.5;color:var(--line);display:block;margin:0 auto 10px}
+.empty b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+.bulk{display:flex;gap:10px;align-items:center;padding:12px 18px;background:var(--panel2);border-top:1px solid var(--line);flex-wrap:wrap}
+.copy{cursor:pointer;border-radius:5px;padding:1px 3px;margin:-1px -3px}
+.copy:hover{background:var(--chip)}
+.copy .ic{width:13px;height:13px;color:var(--muted);opacity:0;margin-left:4px}
+.copy:hover .ic{opacity:1}
+
+/* ---------- modal ---------- */
+.modal-bg{position:fixed;inset:0;background:var(--overlay);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:7vh 12px 12px;z-index:20}
+.modal-bg.show{display:flex;animation:fade .15s ease-out}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:min(660px,100%);max-height:86vh;overflow:auto;box-shadow:var(--shadow-lg);animation:rise .18s ease-out}
+@keyframes fade{from{opacity:0}}@keyframes rise{from{transform:translateY(10px) scale(.98);opacity:0}}
+.modal .hd{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--panel);z-index:1}
+.modal .hd h3{margin:0;font-size:16px;flex:1}
+.modal .bd{padding:18px 20px}
+.modal .ft{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;background:var(--panel2)}
+.form{display:grid;grid-template-columns:140px 1fr;gap:12px 14px;align-items:center}
+.form label{color:var(--text2);font-size:13px;font-weight:500}
 .form input,.form select{width:100%}
 .form .hint{grid-column:2;font-size:12px;color:var(--muted);margin-top:-6px}
-.row{display:flex;gap:8px;align-items:center}
-.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
-.tabs button{border:none;background:none;padding:8px 12px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
-.tabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
-.err-msg{color:var(--err);font-size:13px;margin-top:10px;min-height:1em}
-#toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none;z-index:30}
-#toast.show{opacity:1}
-#login{display:none;min-height:100vh;align-items:center;justify-content:center}
-#login .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:28px;width:340px}
-#login h1{font-size:18px;margin:0 0 4px}
-#login input{width:100%;margin-top:12px}
-#login .btn{width:100%;margin-top:16px;padding:9px}
-.icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:5px}
-.icon-btn:hover{background:var(--chip);color:var(--text)}
-.copy{cursor:pointer}.copy:hover{text-decoration:underline}
-header .logo{cursor:pointer;user-select:none}
-header .logo:hover{color:var(--accent)}
-.gsearch{width:240px}
-.btn-group{display:flex}
-.btn-group .btn{border-radius:0;margin-left:-1px}
-.btn-group .btn:first-child{border-radius:7px 0 0 7px;margin-left:0}
-.btn-group .btn:last-child{border-radius:0 7px 7px 0}
-.sys{display:flex;gap:14px;font-size:12.5px}
-.sys .bar{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--line);vertical-align:middle;margin:0 4px;overflow:hidden}
-.sys .bar i{display:block;height:100%;background:var(--ok)}
-.sys .bar i.warn{background:var(--warn)}.sys .bar i.err{background:var(--err)}
-.tsearch{width:200px;padding:4px 8px!important;font-size:13px}
-.hl{background:rgba(250,204,21,.35);border-radius:2px}
-footer{padding:12px 20px;border-top:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
-footer a{color:var(--accent);text-decoration:none}footer a:hover{text-decoration:underline}
-.sec-title{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:0 0 8px}
-@media (max-width:1280px){.gsearch{width:160px}header .stats{display:none}}
-@media (max-width:860px){.layout{grid-template-columns:1fr}aside{max-height:260px}.sys{display:none}header{flex-wrap:wrap}}
+.tabs{margin-bottom:16px;width:100%}
+.tabs button{flex:1;justify-content:center}
+.note{display:flex;gap:10px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--text2);font-size:13px;margin-bottom:14px}
+.note .ic{color:var(--accent);margin-top:2px}
+.err-msg{color:var(--crit);font-size:13px;margin-top:12px;min-height:1em}
+.found{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.found:empty{display:none}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;bottom:22px;right:22px;display:flex;align-items:center;gap:8px;background:var(--panel);color:var(--text);border:1px solid var(--line);padding:10px 14px;border-radius:10px;box-shadow:var(--shadow-lg);opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:60;max-width:420px}
+#toast.show{opacity:1;transform:none}
+#toast .ic{color:var(--good)}#toast.err .ic{color:var(--crit)}
+
+/* ---------- login ---------- */
+#login{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+#login:before,#login:after{content:"";position:absolute;width:520px;height:520px;border-radius:50%;filter:blur(90px);opacity:.28;z-index:0}
+#login:before{background:#2563eb;top:-160px;left:-120px}
+#login:after{background:#06b6d4;bottom:-180px;right:-140px}
+#login .box{position:relative;z-index:1;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:32px;width:min(380px,100%)}
+#login .brand{cursor:default;margin-bottom:22px}
+#login label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin:14px 0 6px}
+#login input{width:100%}
+#login .btn{width:100%;justify-content:center;margin-top:20px;padding:10px}
+#login .theme-corner{position:absolute;top:16px;right:16px;z-index:2}
+
+@media (max-width:1680px){.ctl button span{display:none}}
+@media (max-width:1400px){.topbar .gsearch{width:220px}.sysbar .syspill.app{display:none}}
+@media (max-width:1150px){.sysbar .syspill.app{display:none}.hero-kpis{grid-template-columns:repeat(3,1fr)}.hero-kpis>div:first-child{grid-column:1/-1;border-right:none;border-bottom:1px solid var(--line2)}}
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr}
+  aside{position:static;height:auto;max-height:300px;border-right:none;border-bottom:1px solid var(--line)}
+  .topbar{flex-wrap:wrap}.topbar .gsearch{order:10;width:100%}.sysbar{display:none}
+  main{padding:16px}
+  .form{grid-template-columns:1fr}.form .hint{grid-column:1}
+}
 </style>
 </head>
 <body>
 
-<div id="login"><form class="box" onsubmit="doLogin(event)">
-  <h1>MPTS → SPTS</h1><div class="muted">Sign in to continue</div>
-  <input id="lu" type="text" placeholder="Username" autocomplete="username" autofocus>
-  <input id="lp" type="password" placeholder="Password" autocomplete="current-password">
-  <button class="btn primary">Sign in</button>
-  <div class="err-msg" id="lerr"></div>
-</form></div>
+<!-- icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M3 12h6l4-6h8M9 12l4 6h8"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-restart" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-xcirc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M10 15V9M14 15V9"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.1 4.9A10 10 0 1 1 12 2M16.2 7.8A6 6 0 1 0 18 12M12 12l7-7"/><circle cx="12" cy="12" r="1.5"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></symbol>
+  <symbol id="i-mem" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+</svg>
 
-<div id="app" style="display:none">
-<header>
-  <h1 class="logo" onclick="goHome()" title="Home">MPTS → SPTS</h1>
-  <div class="stats muted">
-    <div>Inputs <b id="s-in">0</b></div>
-    <div>Outputs <b id="s-out">0</b></div>
-    <div>In <b id="s-inr">0</b> Mbps</div>
-    <div>Out <b id="s-outr">0</b> Mbps</div>
-  </div>
+<div id="login">
+  <div class="theme-corner"></div>
+  <form class="box" onsubmit="doLogin(event)">
+    <div class="brand"><span class="logo-mark"><svg><use href="#i-logo"/></svg></span><div><b>MPTS → SPTS</b><small>Stream splitter · Super Media Tech</small></div></div>
+    <div style="font-size:18px;font-weight:650">Welcome back</div>
+    <div class="muted">Sign in to manage your streams</div>
+    <label for="lu">Username</label><input id="lu" type="text" autocomplete="username" autofocus>
+    <label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password">
+    <button class="btn primary">Sign in</button>
+    <div class="err-msg" id="lerr"></div>
+  </form>
+</div>
+
+<div id="app">
+<header class="topbar">
+  <div class="brand" onclick="goHome()" title="Dashboard"><span class="logo-mark"><svg><use href="#i-logo"/></svg></span><div><b>MPTS → SPTS</b><small>Stream splitter</small></div></div>
+  <div class="field-ic gsearch"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="gq" placeholder="Search inputs, programs, outputs…" oninput="render()" aria-label="Search everything"><kbd>/</kbd></div>
   <div class="sp"></div>
-  <div class="sys muted" title="Host CPU (all cores) and memory · App CPU is % of one core">
-    <div>CPU <span class="bar"><i id="sy-cpub"></i></span><b id="sy-cpu">–</b></div>
-    <div>RAM <span class="bar"><i id="sy-memb"></i></span><b id="sy-mem">–</b></div>
-    <div>App <b id="sy-app">–</b></div>
+  <div class="sysbar" title="Host CPU (all cores) and memory · App CPU is % of one core">
+    <div class="syspill"><svg class="ic"><use href="#i-cpu"/></svg>CPU<div class="meter" id="sy-cpub"><i></i></div><b id="sy-cpu">–</b></div>
+    <div class="syspill"><svg class="ic"><use href="#i-mem"/></svg>RAM<div class="meter" id="sy-memb"><i></i></div><b id="sy-mem">–</b></div>
+    <div class="syspill app"><svg class="ic"><use href="#i-activity"/></svg>App<b id="sy-app">–</b></div>
   </div>
-  <input type="text" id="gq" class="gsearch" placeholder="Search everything…" oninput="render()">
-  <div class="btn-group">
-    <button class="btn" onclick="control('start')" title="Enable and start every input">▶ Start all</button>
-    <button class="btn" onclick="control('stop')" title="Disable and stop every input">■ Stop all</button>
-    <button class="btn" onclick="control('restart')" title="Reopen every input and output">↻ Restart all</button>
+  <div class="seg ctl" role="group" aria-label="All inputs">
+    <button onclick="control('start')" title="Enable and start every input"><svg class="ic"><use href="#i-play"/></svg><span>Start all</span></button>
+    <button onclick="control('stop')" title="Disable and stop every input"><svg class="ic"><use href="#i-stop"/></svg><span>Stop all</span></button>
+    <button onclick="control('restart')" title="Reopen every input and output"><svg class="ic"><use href="#i-restart"/></svg><span>Restart all</span></button>
   </div>
-  <a class="btn" href="api/playlist.m3u">Playlist</a>
-  <button class="btn" onclick="openSettings()">Settings</button>
-  <button class="btn" onclick="logout()">Sign out</button>
+  <a class="ibtn" href="api/playlist.m3u" title="Download M3U playlist"><svg class="ic lg"><use href="#i-list"/></svg></a>
+  <button class="ibtn" onclick="openSettings()" title="Settings"><svg class="ic lg"><use href="#i-sliders"/></svg></button>
+  <div class="theme-slot"></div>
+  <button class="ibtn" onclick="logout()" title="Sign out"><svg class="ic lg"><use href="#i-logout"/></svg></button>
 </header>
 <div class="layout">
   <aside>
-    <div class="top"><input type="text" id="filter" placeholder="Filter inputs…" oninput="render()"><button class="btn primary" onclick="openInput()">+ Input</button></div>
+    <div class="hd"><h3>Inputs</h3><span class="count" id="in-count">0</span><span class="sp"></span><button class="btn primary sm" onclick="openInput()"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
+    <div class="flt"><div class="field-ic"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="filter" placeholder="Filter inputs…" oninput="render()"></div></div>
     <div class="inlist" id="inlist"></div>
   </aside>
   <main id="main"></main>
@@ -162,40 +368,40 @@ footer a{color:var(--accent);text-decoration:none}footer a:hover{text-decoration
 
 <!-- input modal -->
 <div class="modal-bg" id="m-input"><div class="modal">
-  <div class="hd"><h3 id="mi-title">Add input</h3><button class="icon-btn" onclick="closeM('m-input')">✕</button></div>
+  <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-in"/></svg></span><h3 id="mi-title">Add input</h3><button class="ibtn sm" onclick="closeM('m-input')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
   <div class="bd">
-    <div class="tabs" id="mi-tabs">
-      <button data-t="disc" class="on" onclick="miTab('disc')">Discover all</button>
-      <button data-t="iface" onclick="miTab('iface')">By interface</button>
-      <button data-t="manual" onclick="miTab('manual')">Manual URL</button>
-      <button data-t="scan" onclick="miTab('scan')">Scan range</button>
+    <div class="seg tabs" id="mi-tabs" role="tablist">
+      <button data-t="disc" onclick="miTab('disc')"><svg class="ic"><use href="#i-radar"/></svg>Discover all</button>
+      <button data-t="iface" onclick="miTab('iface')"><svg class="ic"><use href="#i-layers"/></svg>By interface</button>
+      <button data-t="manual" onclick="miTab('manual')"><svg class="ic"><use href="#i-edit"/></svg>Manual URL</button>
+      <button data-t="scan" onclick="miTab('scan')"><svg class="ic"><use href="#i-grid"/></svg>Scan range</button>
     </div>
     <div class="form">
       <label>Name</label><input type="text" id="mi-name" placeholder="optional, e.g. Satellite 1">
     </div>
-    <div id="mi-iface" class="form" style="margin-top:10px">
+    <div id="mi-iface" class="form" style="margin-top:12px">
       <label>Interface</label><select id="mi-if" onchange="miBuild()"></select>
       <label>Protocol</label><select id="mi-proto" onchange="miBuild()"><option>udp</option><option>rtp</option></select>
-      <label style="align-self:start;padding-top:6px">Groups</label><textarea id="mi-group" class="mono" rows="5" placeholder="239.2.2.2&#10;239.2.2.10-239.2.2.20&#10;239.3.3.1-8:5000" oninput="miBuild()"></textarea>
+      <label style="align-self:start;padding-top:8px">Groups</label><textarea id="mi-group" rows="5" placeholder="239.2.2.2&#10;239.2.2.10-239.2.2.20&#10;239.3.3.1-8:5000" oninput="miBuild()"></textarea>
       <div class="hint">One or many: one per line or comma separated. Ranges like <span class="mono">239.2.2.1-239.2.2.20</span> or <span class="mono">239.2.2.1-20</span>. Add <span class="mono">:port</span> to override the default port.</div>
       <label>Default port</label><input type="number" id="mi-port" value="1234" oninput="miBuild()">
       <label>SSM source</label><input type="text" id="mi-src" placeholder="optional sender IP" oninput="miBuild()">
       <label style="align-self:start">Will add</label><div id="mi-preview" class="mono" style="max-height:130px;overflow:auto">—</div>
     </div>
-    <div id="mi-manual" class="form" style="margin-top:10px;display:none">
+    <div id="mi-manual" class="form" style="margin-top:12px;display:none">
       <label>URL</label><input type="text" id="mi-url" class="mono" placeholder="udp://239.2.2.2:1234?localaddr=192.168.10.10">
       <div class="hint">udp:// or rtp://, optional <span class="mono">localaddr=</span> and <span class="mono">sources=</span></div>
     </div>
-    <div id="mi-disc" style="margin-top:10px">
-      <div class="muted" style="margin-bottom:10px;font-size:13px">Listens on the interface and finds every TS stream (UDP or RTP, any IP, any port). Multicast behind an IGMP-snooping switch only shows up once joined, so use <b>Scan range</b> for those.</div>
+    <div id="mi-disc" style="margin-top:12px">
+      <div class="note"><svg class="ic"><use href="#i-info"/></svg><div>Listens on the interface and finds every TS stream (UDP or RTP, any IP, any port). Multicast behind an IGMP-snooping switch only shows up once joined. Use <b>Scan range</b> for those.</div></div>
       <div class="form">
         <label>Interface</label><select id="dc-if"></select>
         <label>Listen (s)</label><input type="number" id="dc-sec" value="5" min="2" max="30">
       </div>
-      <div class="row" style="margin-top:12px"><button class="btn primary" id="dc-go" onclick="doDiscover()">Discover</button><span class="muted" id="dc-msg"></span></div>
-      <div id="dc-res" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="dc-go" onclick="doDiscover()"><svg class="ic"><use href="#i-radar"/></svg>Discover</button><span class="muted" id="dc-msg"></span></div>
+      <div id="dc-res" class="found"></div>
     </div>
-    <div id="mi-scan" style="margin-top:10px;display:none">
+    <div id="mi-scan" style="margin-top:12px;display:none">
       <div class="form">
         <label>Interface</label><select id="sc-if"></select>
         <label>Protocol</label><select id="sc-proto"><option>udp</option><option>rtp</option></select>
@@ -204,8 +410,8 @@ footer a{color:var(--accent);text-decoration:none}footer a:hover{text-decoration
         <label>Port</label><input type="number" id="sc-port" value="1234">
         <label>Listen (s)</label><input type="number" id="sc-sec" value="3" min="2" max="15">
       </div>
-      <div class="row" style="margin-top:12px"><button class="btn" id="sc-go" onclick="doScan()">Scan</button><span class="muted" id="sc-msg"></span></div>
-      <div id="sc-res" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="sc-go" onclick="doScan()"><svg class="ic"><use href="#i-grid"/></svg>Scan</button><span class="muted" id="sc-msg"></span></div>
+      <div id="sc-res" class="found"></div>
     </div>
     <div class="err-msg" id="mi-err"></div>
   </div>
@@ -214,7 +420,7 @@ footer a{color:var(--accent);text-decoration:none}footer a:hover{text-decoration
 
 <!-- output modal -->
 <div class="modal-bg" id="m-out"><div class="modal">
-  <div class="hd"><h3 id="mo-title">Output</h3><button class="icon-btn" onclick="closeM('m-out')">✕</button></div>
+  <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-out"/></svg></span><h3 id="mo-title">Output</h3><button class="ibtn sm" onclick="closeM('m-out')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
   <div class="bd"><div class="form">
     <label>Source service</label><div id="mo-src" class="mono"></div>
     <label>Program name</label><input type="text" id="mo-name">
@@ -222,37 +428,53 @@ footer a{color:var(--accent);text-decoration:none}footer a:hover{text-decoration
     <label>Service ID</label><input type="number" id="mo-sid" placeholder="same as source">
     <div class="hint">Optional. Leave empty to keep the source service ID.</div>
     <label>TS ID</label><input type="number" id="mo-tsid" placeholder="same as service ID">
-    <label>Protocol</label><select id="mo-proto"><option>udp</option><option>rtp</option></select>
-    <label>Address</label><div class="row"><input type="text" id="mo-addr" class="mono" placeholder="auto"><button class="btn sm" onclick="$('#mo-addr').value=''">Auto</button></div>
+    <label>Protocol</label><div class="seg" id="mo-proto-seg"><button type="button" data-v="udp" onclick="setProto('udp')">UDP</button><button type="button" data-v="rtp" onclick="setProto('rtp')">RTP</button></div>
+    <label>Address</label><div class="row"><input type="text" id="mo-addr" class="mono" placeholder="auto from pool" style="flex:1"><button class="btn sm" onclick="$('#mo-addr').value=''">Auto</button></div>
     <div class="hint">ip:port. Leave empty to allocate from the pool in Settings.</div>
     <label>Interface</label><select id="mo-if"></select>
   </div><div class="err-msg" id="mo-err"></div></div>
-  <div class="ft"><button class="btn" onclick="closeM('m-out')">Cancel</button><button class="btn primary" onclick="saveOutput()">Save</button></div>
+  <div class="ft"><button class="btn" onclick="closeM('m-out')">Cancel</button><button class="btn primary" onclick="saveOutput()">Save output</button></div>
 </div></div>
 
 <!-- settings modal -->
 <div class="modal-bg" id="m-set"><div class="modal">
-  <div class="hd"><h3>Settings</h3><button class="icon-btn" onclick="closeM('m-set')">✕</button></div>
+  <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-sliders"/></svg></span><h3>Settings</h3><button class="ibtn sm" onclick="closeM('m-set')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
   <div class="bd">
-    <div class="muted" style="margin-bottom:12px">Defaults for automatically generated outputs. Existing outputs keep their address.</div>
+    <div class="note"><svg class="ic"><use href="#i-info"/></svg><div>Defaults for automatically generated outputs. Existing outputs keep their address.</div></div>
     <div class="form">
       <label>First group</label><input type="text" id="st-group" class="mono">
       <label>Port</label><input type="number" id="st-port">
       <label>Protocol</label><select id="st-proto"><option>udp</option><option>rtp</option></select>
       <label>Interface</label><select id="st-if"></select>
       <label>Multicast TTL</label><input type="number" id="st-ttl">
+      <label>Theme</label><div class="theme-slot-set"></div>
     </div><div class="err-msg" id="st-err"></div>
   </div>
   <div class="ft"><button class="btn" onclick="closeM('m-set')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button></div>
 </div></div>
 
-<div id="toast"></div>
+<div id="toast"><svg class="ic"><use href="#i-check"/></svg><span></span></div>
+<div id="tip"></div>
 
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon=(n,c='')=>`<svg class="ic ${c}"><use href="#i-${n}"/></svg>`;
 let bk={};const bkP=()=>bk.proto??S.settings.auto_proto;
 let S={inputs:[],outputs:[],settings:{}}, IFS=[], sel=null, checked=new Set(), editIn=null, editOut=null, newOut=null, timer=null;
+
+// ---------- theme: auto (follow OS) | light | dark, remembered per browser ----------
+function getTheme(){try{return localStorage.getItem('theme')||'auto'}catch(e){return 'auto'}}
+function setTheme(t){
+  try{localStorage.setItem('theme',t)}catch(e){}
+  if(t==='auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=t;
+  document.querySelectorAll('.themeseg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===t));
+}
+function themeSeg(){
+  const t=getTheme(),b=(v,ic,l)=>`<button type="button" data-v="${v}" aria-pressed="${t===v}" title="${l}" onclick="setTheme('${v}')">${icon(ic)}</button>`;
+  return `<div class="seg icons themeseg" role="group" aria-label="Theme">${b('light','sun','Light')}${b('auto','monitor','Auto (system)')}${b('dark','moon','Dark')}</div>`;
+}
+document.querySelectorAll('.theme-slot,.theme-slot-set,.theme-corner').forEach(el=>el.innerHTML=themeSeg());
 
 async function api(method,path,body){
   const r=await fetch(path,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
@@ -261,7 +483,11 @@ async function api(method,path,body){
   if(!r.ok) throw new Error(j.error||r.statusText);
   return j;
 }
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
+function toast(m,kind){
+  const t=$('#toast');t.className=kind==='err'?'err':'';t.querySelector('use').setAttribute('href',kind==='err'?'#i-xcirc':'#i-check');
+  t.querySelector('span').textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),kind==='err'?4000:2200);
+}
+const fail=e=>toast(e.message,'err');
 function showLogin(){clearInterval(timer);timer=null;$('#app').style.display='none';$('#login').style.display='flex'}
 async function doLogin(e){
   e.preventDefault();$('#lerr').textContent='';
@@ -272,17 +498,31 @@ async function logout(){await api('POST','api/logout');showLogin()}
 
 async function start(){
   try{await refresh()}catch(e){return}
-  $('#login').style.display='none';$('#app').style.display='';
+  $('#login').style.display='none';$('#app').style.display='flex';
   IFS=await api('GET','api/interfaces');
   if(!timer) timer=setInterval(()=>refresh().catch(()=>{}),2000);
 }
-async function refresh(){S=await api('GET','api/state');render()}
 
-const mbps=k=>(k/1000).toFixed(k>=10000?1:2);
+// ---------- history for sparklines (client side, last 3 minutes) ----------
+const HMAX=90,H={in:[],out:[],cpu:[],inp:{}};
+function pushH(arr,v){arr.push({t:Date.now(),v});if(arr.length>HMAX)arr.shift()}
+async function refresh(){
+  S=await api('GET','api/state');
+  let inR=0,outR=0;
+  S.inputs.forEach(i=>{const k=i.enabled?i.status?.kbps||0:0;inR+=k;pushH(H.inp[i.id]??=[],k)});
+  S.outputs.forEach(o=>outR+=o.enabled?o.status?.kbps||0:0);
+  pushH(H.in,inR);pushH(H.out,outR);if(S.system)pushH(H.cpu,S.system.cpu);
+  render();
+}
+
+const mbps=k=>(k/1000).toFixed(k>=100000?0:k>=10000?1:2);
 const stateOf=i=>!i.enabled?'off':(i.status?.state||'starting');
 const stateTxt={ok:'Receiving',nosignal:'No signal',error:'Error',starting:'Starting',off:'Disabled'};
+const statePill=st=>{const m={ok:['ok','check'],nosignal:['warn','alert'],error:['err','xcirc'],off:['off','pause'],starting:['off','clock']}[st]||['off','clock'];
+  return `<span class="pill ${m[0]}">${icon(m[1])}${stateTxt[st]||st}</span>`};
 const stype=t=>({1:'TV',2:'Radio',0x11:'HD TV',0x16:'SD TV',0x19:'HD TV',0x1F:'UHD TV',0x0A:'Radio',0x0C:'Data'}[t]||'Type '+t);
 function ifOpts(v){return '<option value="">Any (default route)</option>'+IFS.map(i=>`<option value="${esc(i.addr)}" ${i.addr===v?'selected':''}>${esc(i.name)} — ${esc(i.addr)}</option>`).join('')}
+const emptyState=(ic,title,msg='')=>`<div class="empty">${icon(ic)}<b>${title}</b>${msg}</div>`;
 
 // q holds per-table searches; they survive the periodic re-render
 const q={svc:'',out:''};
@@ -290,137 +530,227 @@ const match=(query,...fields)=>{const h=fields.join(' ').toLowerCase();return qu
 const outText=o=>{const i=S.inputs.find(x=>x.id===o.input_id);return [o.name,o.provider,o.url,o.src_sid,o.out_sid,i?.name||'',o.enabled?'enabled':'disabled']};
 const svcText=x=>[x.name,x.provider,x.sid,stype(x.type),...x.streams.map(e=>e.kind+' '+e.pid)];
 const gb=b=>b>=1<<30?(b/(1<<30)).toFixed(1)+' GB':(b/(1<<20)).toFixed(0)+' MB';
-function bar(el,pct){el.style.width=Math.min(100,pct)+'%';el.className=pct>90?'err':pct>70?'warn':''}
+const sev=p=>p>90?'err':p>70?'warn':'';
+function meter(el,pct){el.className='meter '+sev(pct);el.firstElementChild.style.width=Math.min(100,pct)+'%'}
+// relative bitrate bar: sequential (one hue), no severity colors
+const rateBar=pct=>`<div class="meter"><i style="width:${Math.max(0,Math.min(100,pct)).toFixed(1)}%"></i></div>`;
+// ---------- sortable tables: click a header to sort, again to reverse; remembered per browser ----------
+const SORT=(()=>{try{return JSON.parse(localStorage.getItem('sort'))||{}}catch(e){return {}}})();
+function sortBy(t,k){const c=SORT[t];SORT[t]=c&&c.k===k?{k,d:-c.d}:{k,d:1};try{localStorage.setItem('sort',JSON.stringify(SORT))}catch(e){}
+  if(t==='sc'||t==='dc') showFound(t,found[t]); else render()}
+function th(t,k,label,cls='',style=''){
+  const c=SORT[t],on=c&&c.k===k;
+  return `<th class="sortable ${cls} ${on?'on':''}" style="${style}" onclick="sortBy('${t}','${k}')" aria-sort="${on?(c.d>0?'ascending':'descending'):'none'}" title="Sort by ${label}">${label}<span class="arr">${on?(c.d>0?'▲':'▼'):'↕'}</span></th>`;
+}
+function sorted(t,list,get){
+  const c=SORT[t],g=c&&get[c.k];if(!g)return list;
+  return [...list].sort((a,b)=>{const x=g(a),y=g(b);
+    return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),undefined,{numeric:true,sensitivity:'base'}))*c.d});
+}
+const outStatusRank=o=>!o.enabled?3:o.status?.error?0:o.status?.active?2:1;
+const stateRank={error:0,nosignal:1,starting:2,ok:3,off:4};
+const meterHTML=pct=>`<div class="meter ${sev(pct)}"><i style="width:${Math.min(100,pct).toFixed(1)}%"></i></div>`;
 
+// ---------- sparkline (single series) with crosshair + tooltip ----------
+const SP={};          // key -> {arr,fmt}
+let hov=null;         // {k,x} pointer position while hovering a sparkline
+function spark(key,arr,fmt){
+  SP[key]={arr,fmt};
+  if(arr.length<2) return `<div class="spark nodata" data-k="${key}"></div>`;
+  const W=200,Hh=48,max=Math.max(...arr.map(p=>p.v))*1.15||1,n=arr.length;
+  const X=i=>W*i/(n-1),Y=v=>Hh-2-(v/max)*(Hh-6);
+  let d='';arr.forEach((p,i)=>d+=(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1));
+  const a=d+`L${X(n-1).toFixed(1)} ${Hh}L${X(0).toFixed(1)} ${Hh}Z`,last=arr[n-1];
+  return `<div class="spark" data-k="${key}" tabindex="0" aria-label="trend, latest ${esc(fmt(last.v))}">
+    <svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none"><path class="area" d="${a}"/><path class="line" d="${d}" vector-effect="non-scaling-stroke"/></svg>
+    <i class="end" style="left:${X(n-1)/W*100}%;top:${Y(last.v)/Hh*100}%"></i><i class="xh"></i><i class="xd"></i></div>`;
+}
+function sparkAt(el,clientX){
+  const s=SP[el.dataset.k];if(!s||s.arr.length<2)return;
+  const r=el.getBoundingClientRect(),W=200,Hh=48,n=s.arr.length,max=Math.max(...s.arr.map(p=>p.v))*1.15||1;
+  const px=(clientX-r.left)/r.width*W;
+  let i=Math.round(px/W*(n-1));i=Math.max(0,Math.min(n-1,i));
+  const x=i/(n-1)*100,y=(Hh-2-(s.arr[i].v/max)*(Hh-6))/Hh*100;
+  el.classList.add('hov');el.querySelector('.xh').style.left=x+'%';
+  const xd=el.querySelector('.xd');xd.style.left=x+'%';xd.style.top=y+'%';
+  const tip=$('#tip');tip.textContent='';
+  const b=document.createElement('b');b.textContent=s.fmt(s.arr[i].v);
+  const sp=document.createElement('span');const ago=Math.round((Date.now()-s.arr[i].t)/1000);
+  const key=document.createElement('i');key.className='key';
+  sp.append(key,document.createTextNode(ago<3?'now':ago+'s ago'));tip.append(b,sp);
+  tip.style.display='block';
+  const tx=r.left+r.width*x/100,ty=r.top+r.height*y/100;
+  tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,tx+12)+'px';tip.style.top=Math.max(8,ty-tip.offsetHeight-10)+'px';
+}
+document.addEventListener('pointermove',e=>{
+  const el=e.target.closest?.('.spark');
+  if(el){hov={k:el.dataset.k,x:e.clientX};sparkAt(el,e.clientX)}
+  else if(hov){hov=null;$('#tip').style.display='none';document.querySelectorAll('.spark.hov').forEach(x=>x.classList.remove('hov'))}
+});
+document.addEventListener('focusin',e=>{if(e.target.classList?.contains('spark')){const r=e.target.getBoundingClientRect();sparkAt(e.target,r.right-1)}});
+document.addEventListener('focusout',e=>{if(e.target.classList?.contains('spark')){$('#tip').style.display='none';e.target.classList.remove('hov')}});
+
+// ---------- render ----------
 function render(){
   // innerHTML replacement drops focus; remember and restore it for search boxes
   const ae=document.activeElement,fid=ae&&ae.id,fs=ae&&ae.selectionStart,fe=ae&&ae.selectionEnd;
   const f=$('#filter').value.toLowerCase(),g=$('#gq').value.trim();
-  let inR=0,outR=0;
-  S.inputs.forEach(i=>inR+=i.status?.kbps||0);
-  S.outputs.forEach(o=>outR+=o.status?.kbps||0);
-  $('#s-in').textContent=S.inputs.length;$('#s-out').textContent=S.outputs.length;
-  $('#s-inr').textContent=mbps(inR);$('#s-outr').textContent=mbps(outR);
   const y=S.system;
   if(y){
-    $('#sy-cpu').textContent=y.cpu.toFixed(0)+'%';bar($('#sy-cpub'),y.cpu);
-    $('#sy-mem').textContent=`${gb(y.mem_used)} / ${gb(y.mem_total)}`;bar($('#sy-memb'),y.mem_used/y.mem_total*100);
+    $('#sy-cpu').textContent=y.cpu.toFixed(0)+'%';meter($('#sy-cpub'),y.cpu);
+    $('#sy-mem').textContent=gb(y.mem_used);meter($('#sy-memb'),y.mem_used/y.mem_total*100);
     $('#sy-app').textContent=`${y.app_cpu.toFixed(1)}% · ${gb(y.app_rss)}`;
   }
   if(sel!==null&&!S.inputs.find(i=>i.id===sel)) sel=null;
-  $('#inlist').innerHTML=S.inputs.filter(i=>!f||(i.name+i.url).toLowerCase().includes(f)).map(i=>{
+  $('#in-count').textContent=S.inputs.length;
+  const list=S.inputs.filter(i=>!f||(i.name+i.url).toLowerCase().includes(f));
+  $('#inlist').innerHTML=list.map(i=>{
     const st=stateOf(i),n=S.outputs.filter(o=>o.input_id===i.id).length;
     return `<div class="initem ${i.id===sel&&!g?'sel':''}" onclick="pick(${i.id})">
       <span class="dot ${st}" title="${stateTxt[st]||st}"></span><span class="nm">${esc(i.name)}</span>
-      <span class="muted mono">${i.enabled?mbps(i.status?.kbps||0):'—'}</span>
-      <span></span><span class="u muted mono">${esc(i.url)} · ${n} out</span></div>`}).join('')||'<div class="empty">No inputs</div>';
+      <span class="rate">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'off'}</span>
+      <span></span><span class="u muted mono">${esc(i.url)} · ${n} out</span>
+      ${i.enabled?`<span></span>${spark('side'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps')}`:''}</div>`}).join('')||emptyState('inbox',S.inputs.length?'No match':'No inputs yet');
   $('#main').innerHTML=g?searchView(g):sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
   if(fid&&ae!==document.activeElement){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(fs,fe)}catch(e){}}}
+  if(hov){const el=document.querySelector(`.spark[data-k="${hov.k}"]`);if(el)sparkAt(el,hov.x);else{hov=null;$('#tip').style.display='none'}}
 }
-function pick(id){if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';render()}
-function goHome(){sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';render()}
-function tsearch(key,ph){return `<input type="text" id="ts-${key}" class="tsearch" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;render()">`}
+function pick(id){if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';render();window.scrollTo({top:0})}
+function goHome(){sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';render();window.scrollTo({top:0})}
+function tsearch(key,ph){return `<div class="field-ic tsearch">${icon('search')}<input type="text" id="ts-${key}" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;render()"></div>`}
 
-function outCard(title,list,showInput,extra=''){
+function outCard(title,list,showInput){
   const vis=list.filter(o=>!q.out||match(q.out,...outText(o)));
   const ids=JSON.stringify(vis.map(o=>o.id)),on=vis.filter(o=>o.enabled).length;
-  return `<div class="card"><div class="hd"><h2>${title}</h2><span class="muted">${on}/${vis.length} enabled</span><span class="sp"></span>${extra}${tsearch('out','Search outputs…')}
-    <label class="row muted" style="gap:6px;font-size:13px" title="Enable / disable all shown outputs">All
+  return `<div class="card"><div class="hd"><h2>${icon('out')}${title}</h2><span class="count">${on}/${vis.length}</span><span class="muted" style="font-size:12.5px">enabled</span><span class="sp"></span>${tsearch('out','Search outputs…')}
+    <label class="row" style="gap:7px;font-size:13px;color:var(--text2)" title="Enable / disable all shown outputs">All
       <span class="switch"><input type="checkbox" ${vis.length&&on===vis.length?'checked':''} ${vis.length?'':'disabled'} onchange='setOuts(${ids},this.checked)'><span></span></span></label>
-    <button class="btn sm danger" ${vis.length?'':'disabled'} onclick='delOuts(${ids})'>Delete all</button></div>
+    <button class="btn sm danger" ${vis.length?'':'disabled'} onclick='delOuts(${ids})'>${icon('trash')}Delete all</button></div>
     ${outRows(vis,showInput)}</div>`;
 }
 function outRows(list,showInput){
-  if(!list.length) return `<div class="empty">${q.out?'No matching outputs':'No outputs'}</div>`;
-  return `<table><tr><th style="width:50px">On</th><th>Program</th><th>Service ID</th>${showInput?'<th>Input</th>':''}<th>Output</th><th class="num">Mbps</th><th>Status</th><th style="width:90px"></th></tr>`+
+  if(!list.length) return q.out?emptyState('search','No matching outputs'):emptyState('out','No outputs yet','Open an input and add programs to create outputs.');
+  const maxK=Math.max(1,...list.map(o=>o.status?.kbps||0));
+  const inName=o=>S.inputs.find(i=>i.id===o.input_id)?.name||'';
+  list=sorted('out',list,{on:o=>o.enabled?0:1,name:o=>o.name,sid:o=>o.out_sid,input:inName,url:o=>o.url,rate:o=>o.enabled?o.status?.kbps||0:-1,status:outStatusRank});
+  return `<div class="tablewrap"><table><thead><tr>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:84px"></th></tr></thead><tbody>`+
   list.map(o=>{
     const s=o.status;let badge;
-    if(!o.enabled) badge='<span class="chip">disabled</span>';
-    else if(s?.error) badge=`<span class="chip err" title="${esc(s.error)}">${esc(s.error.slice(0,40))}</span>`;
-    else if(s?.active) badge='<span class="chip ok">active</span>';
-    else badge='<span class="chip warn">waiting</span>';
-    const inp=S.inputs.find(i=>i.id===o.input_id);
-    return `<tr><td><label class="switch"><input type="checkbox" ${o.enabled?'checked':''} onchange="toggleOut(${o.id},this.checked)"><span></span></label></td>
-    <td><b>${esc(o.name)}</b>${o.provider?` <span class="muted">· ${esc(o.provider)}</span>`:''}</td>
+    if(!o.enabled) badge=`<span class="pill off">${icon('pause')}Disabled</span>`;
+    else if(s?.error) badge=`<span class="pill err" title="${esc(s.error)}">${icon('xcirc')}${esc(s.error.slice(0,32))}</span>`;
+    else if(s?.active) badge=`<span class="pill ok">${icon('check')}Active</span>`;
+    else badge=`<span class="pill warn">${icon('clock')}Waiting</span>`;
+    const inp=S.inputs.find(i=>i.id===o.input_id),k=o.enabled?s?.kbps||0:0;
+    return `<tr><td><label class="switch" title="${o.enabled?'Disable':'Enable'}"><input type="checkbox" ${o.enabled?'checked':''} onchange="toggleOut(${o.id},this.checked)"><span></span></label></td>
+    <td><b>${esc(o.name)}</b>${o.provider?`<div class="muted" style="font-size:12px">${esc(o.provider)}</div>`:''}</td>
     <td class="mono">${o.src_sid}${o.out_sid!==o.src_sid?` → <b>${o.out_sid}</b>`:''}</td>
     ${showInput?`<td><a href="#" onclick="pick(${o.input_id});return false">${esc(inp?.name||'')}</a></td>`:''}
-    <td class="mono copy" title="Click to copy" onclick="copy('${esc(o.url)}')">${esc(o.url)}</td>
-    <td class="num mono">${o.enabled?mbps(s?.kbps||0):'—'}</td><td>${badge}</td>
-    <td style="text-align:right"><button class="icon-btn" title="Edit" onclick="openOut(${o.id})">✎</button><button class="icon-btn" title="Delete" onclick="delOut(${o.id})">🗑</button></td></tr>`}).join('')+'</table>';
+    <td class="mono"><span class="copy" title="Copy" onclick="copy('${esc(o.url)}')">${esc(o.url)}${icon('copy')}</span></td>
+    <td class="num mono"><div class="ratecell">${o.enabled?mbps(k)+' Mbps':'—'}${rateBar(k/maxK*100)}</div></td><td>${badge}</td>
+    <td style="text-align:right;white-space:nowrap"><button class="ibtn sm" title="Edit" onclick="openOut(${o.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delOut(${o.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>';
 }
+function kpi(ic,label,val,unit,extra=''){return `<div class="tile"><div class="lbl">${icon(ic)}${label}</div><div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${extra}</div>`}
 function overview(){
-  if(!S.inputs.length) return `<div class="card"><div class="empty">Add an MPTS input to get started.<br><br><button class="btn primary" onclick="openInput()">+ Add input</button></div></div>`;
-  return outCard('All outputs',S.outputs,true);
+  const head=`<div class="page-hd"><div><h1>Dashboard</h1><p>Live overview · updates every 2 seconds</p></div><span class="sp"></span><button class="btn primary" onclick="openInput()">${icon('plus')}Add input</button></div>`;
+  if(!S.inputs.length) return head+`<div class="card">${emptyState('radar','No inputs yet','<div style="margin-bottom:16px">Add an MPTS source. Discover finds every stream on an interface automatically.</div><button class="btn primary" onclick="openInput()">'+icon('plus')+'Add input</button>')}</div>`;
+  const c={ok:0,nosignal:0,error:0,off:0,starting:0};S.inputs.forEach(i=>c[stateOf(i)]++);
+  const en=S.outputs.filter(o=>o.enabled),act=en.filter(o=>o.status?.active).length,y=S.system||{};
+  const inR=H.in.at(-1)?.v||0,outR=H.out.at(-1)?.v||0,memP=y.mem_total?y.mem_used/y.mem_total*100:0;
+  const dotLbl=(cls,n,l)=>n?`<span><i class="dot ${cls}"></i>${n} ${l}</span>`:'';
+  const tiles=
+    kpi('in','Inputs receiving',c.ok,`/ ${S.inputs.length}`,`<div class="sub">${dotLbl('nosignal',c.nosignal,'no signal')}${dotLbl('error',c.error,'error')}${dotLbl('off',c.off,'disabled')}${c.ok===S.inputs.length?'<span>'+icon('check')+' all healthy</span>':''}</div>`)+
+    kpi('out','Outputs active',act,`/ ${S.outputs.length}`,`<div class="sub"><span>${en.length} enabled</span>${S.outputs.length-en.length?`<span>${S.outputs.length-en.length} disabled</span>`:''}</div>`)+
+    kpi('activity','Input bitrate',mbps(inR),'Mbps',spark('k-in',H.in,v=>mbps(v)+' Mbps in'))+
+    kpi('activity','Output bitrate',mbps(outR),'Mbps',spark('k-out',H.out,v=>mbps(v)+' Mbps out'))+
+    kpi('cpu','Host CPU',(y.cpu??0).toFixed(0),'%',spark('k-cpu',H.cpu,v=>v.toFixed(1)+'% CPU')+`<div class="sub"><span>${y.cores||'–'} cores</span><span>app ${(y.app_cpu??0).toFixed(1)}% of a core</span></div>`)+
+    kpi('mem','Memory',gb(y.mem_used||0).split(' ')[0],gb(y.mem_used||0).split(' ')[1]+' / '+gb(y.mem_total||0),meterHTML(memP)+`<div class="sub"><span>${memP.toFixed(0)}% used</span><span>app ${gb(y.app_rss||0)}</span></div>`);
+  const grid=S.inputs.map(i=>{const st=stateOf(i),s=i.status||{},n=S.outputs.filter(o=>o.input_id===i.id).length;
+    return `<div class="intile" onclick="if(!event.target.closest('.spark'))pick(${i.id})"><div class="t"><span class="dot ${st}"></span><b>${esc(i.name)}</b>${statePill(st)}</div>
+      <div class="u mono muted">${esc(i.url)}</div>
+      ${i.enabled?spark('g'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):'<div class="spark" style="height:34px"></div>'}
+      <div class="f"><span><b>${(s.services||[]).length}</b> programs · <b>${n}</b> outputs</span><span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> Mbps</span></div></div>`}).join('');
+  return head+`<div class="kpis">${tiles}</div>
+    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${S.inputs.length}</span></div><div class="ingrid">${grid}</div></div>
+    ${outCard('All outputs',S.outputs,true)}`;
 }
 function searchView(g){
   const ins=S.inputs.filter(i=>match(g,i.name,i.url,stateTxt[stateOf(i)]));
   const svcs=[];S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
   const outs=S.outputs.filter(o=>match(g,...outText(o)));
-  const inT=ins.length?`<table><tr><th></th><th>Input</th><th>URL</th><th class="num">Mbps</th><th>Programs</th></tr>`+ins.map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td style="width:24px"><span class="dot ${stateOf(i)}"></span></td><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0):'—'}</td><td>${(i.status?.services||[]).length}</td></tr>`).join('')+'</table>':'<div class="empty">No matching inputs</div>';
-  const svT=svcs.length?`<table><tr><th>SID</th><th>Program</th><th>Input</th><th>Streams</th><th class="num">Mbps</th><th></th></tr>`+svcs.map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?` <span class="muted">· ${esc(x.provider)}</span>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${x.streams.map(e=>`<span class="chip ${e.kind}">${e.kind} ${e.pid}</span>`).join('')}</td><td class="num mono">${mbps(x.kbps)}</td><td style="text-align:right"><button class="btn sm" onclick="sel=${i.id};openOut(null,${x.sid})">+ Output</button></td></tr>`).join('')+'</table>':'<div class="empty">No matching programs</div>';
-  return `<div class="card"><div class="hd"><h2>Search: “${esc(g)}”</h2><span class="sp"></span><button class="btn sm" onclick="$('#gq').value='';render()">Clear</button></div></div>
-    <div class="card"><div class="hd"><h2>Inputs</h2><span class="muted">${ins.length}</span></div>${inT}</div>
-    <div class="card"><div class="hd"><h2>Programs</h2><span class="muted">${svcs.length}</span></div>${svT}</div>
+  const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>(i.status?.services||[]).length}).map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${(i.status?.services||[]).length}</td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching inputs');
+  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}).map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right"><button class="btn sm" onclick="sel=${i.id};openOut(null,${x.sid})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching programs');
+  return `<div class="page-hd"><div><h1>Search results</h1><p>“${esc(g)}” · ${ins.length} inputs · ${svcs.length} programs · ${outs.length} outputs</p></div><span class="sp"></span><button class="btn" onclick="$('#gq').value='';render()">${icon('x')}Clear search</button></div>
+    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span></div>${inT}</div>
+    <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${svcs.length}</span></div>${svT}</div>
     ${outCard('Outputs',outs,true)}`;
 }
+const streamChips=x=>x.streams.map(e=>`<span class="chip ${e.kind}" title="stream type 0x${e.type.toString(16)}"><i></i>${e.kind} ${e.pid}</span>`).join('');
 function inputView(i){
   const st=stateOf(i),s=i.status||{},outs=S.outputs.filter(o=>o.input_id===i.id);
   const all=s.services||[],svcs=all.filter(x=>!q.svc||match(q.svc,...svcText(x)));
   const used={};outs.forEach(o=>used[o.src_sid]=(used[o.src_sid]||0)+1);
   for(const c of [...checked]) if(!all.find(x=>x.sid===c)) checked.delete(c);
   const allChk=svcs.length&&svcs.every(x=>checked.has(x.sid));
+  const maxK=Math.max(1,...all.map(x=>x.kbps));
   let svcTable;
-  if(!i.enabled) svcTable='<div class="empty">Input is disabled</div>';
-  else if(!all.length) svcTable=`<div class="empty">${st==='error'?esc(s.error):'Waiting for PAT/PMT…'}</div>`;
-  else if(!svcs.length) svcTable='<div class="empty">No matching programs</div>';
-  else svcTable=`<table><tr><th style="width:34px"><input type="checkbox" ${allChk?'checked':''} onchange="chkAll(this.checked)"></th><th>SID</th><th>Program</th><th>Type</th><th>Streams</th><th class="num">Mbps</th><th>Outputs</th><th></th></tr>`+
-    svcs.map(x=>`<tr><td><input type="checkbox" ${checked.has(x.sid)?'checked':''} onchange="chk(${x.sid},this.checked)"></td>
-      <td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?` <span class="muted">· ${esc(x.provider)}</span>`:''}</td>
-      <td>${stype(x.type)}</td>
-      <td>${x.streams.map(e=>`<span class="chip ${e.kind}" title="type 0x${e.type.toString(16)}">${e.kind} ${e.pid}</span>`).join('')}</td>
-      <td class="num mono">${mbps(x.kbps)}</td><td>${used[x.sid]?`<span class="chip ok">${used[x.sid]}</span>`:''}</td>
-      <td style="text-align:right"><button class="btn sm" onclick="openOut(null,${x.sid})">+ Output</button></td></tr>`).join('')+'</table>';
+  if(!i.enabled) svcTable=emptyState('pause','Input is disabled','Turn it on to read its programs.');
+  else if(!all.length) svcTable=st==='error'?emptyState('xcirc','Cannot open input',esc(s.error)):emptyState('clock','Waiting for programs…','Reading PAT, PMT and SDT from the stream.');
+  else if(!svcs.length) svcTable=emptyState('search','No matching programs');
+  else svcTable=`<div class="tablewrap"><table><thead><tr><th style="width:40px"><input type="checkbox" ${allChk?'checked':''} onchange="chkAll(this.checked)" aria-label="Select all"></th>${th('svc','sid','SID')}${th('svc','name','Program')}${th('svc','type','Type')}${th('svc','streams','Streams')}${th('svc','rate','Bitrate','num')}${th('svc','outs','Outputs')}<th></th></tr></thead><tbody>`+
+    sorted('svc',svcs,{sid:x=>x.sid,name:x=>x.name||'',type:x=>stype(x.type),streams:x=>x.streams.length,rate:x=>x.kbps,outs:x=>used[x.sid]||0}).map(x=>`<tr><td><input type="checkbox" ${checked.has(x.sid)?'checked':''} onchange="chk(${x.sid},this.checked)" aria-label="Select ${esc(x.name)}"></td>
+      <td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td>
+      <td><span class="chip">${stype(x.type)}</span></td><td>${streamChips(x)}</td>
+      <td class="num mono"><div class="ratecell">${mbps(x.kbps)} Mbps${rateBar(x.kbps/maxK*100)}</div></td>
+      <td>${used[x.sid]?`<span class="pill ok">${icon('check')}${used[x.sid]}</span>`:''}</td>
+      <td style="text-align:right"><button class="btn sm" onclick="openOut(null,${x.sid})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
   if(all.length&&i.enabled) svcTable+=
-    `<div class="bulk"><b>${checked.size}</b> selected — create outputs with auto address:
+    `<div class="bulk"><span class="count">${checked.size}</span><span class="text2">selected · create outputs with auto address</span><span class="sp"></span>
       <select id="bk-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
       <select id="bk-if" onchange="bk.la=this.value">${ifOpts(bk.la??S.settings.auto_localaddr)}</select>
-      <button class="btn primary sm" ${checked.size?'':'disabled'} onclick="bulkCreate()">Create ${checked.size||''} output${checked.size===1?'':'s'}</button></div>`;
-  return `<div class="card"><div class="hd"><span class="dot ${st}"></span><h2>${esc(i.name)}</h2><span class="mono muted">${esc(i.url)}</span><span class="sp"></span>
-      <label class="switch" title="Enable / disable"><input type="checkbox" ${i.enabled?'checked':''} onchange="toggleIn(${i.id},this.checked)"><span></span></label>
-      <button class="btn sm" onclick="openInput(${i.id})">Edit</button><button class="btn sm danger" onclick="delIn(${i.id})">Delete</button></div>
-    <div class="meta"><div><span>Status</span>${stateTxt[st]||st}${s.error?` <span class="muted">— ${esc(s.error)}</span>`:''}</div>
-      <div><span>Bitrate</span>${mbps(s.kbps||0)} Mbps</div>
-      <div><span>TSID</span>${s.tsid??'—'}</div><div><span>ONID</span>${s.onid??'—'}</div>
-      <div><span>Services</span>${all.length}</div><div><span>Outputs</span>${outs.length}</div></div></div>
-    <div class="card"><div class="hd"><h2>Programs</h2><span class="sp"></span>${tsearch('svc','Search programs…')}</div>${svcTable}</div>
+      <button class="btn primary sm" ${checked.size?'':'disabled'} onclick="bulkCreate()">${icon('plus')}Create ${checked.size||''} output${checked.size===1?'':'s'}</button></div>`;
+  const act=outs.filter(o=>o.enabled&&o.status?.active).length;
+  return `<div class="card">
+      <div class="hero"><span class="tv">${icon('in','lg')}</span>
+        <div style="min-width:0"><h1>${esc(i.name)} ${statePill(st)}</h1>
+          <div class="url mono"><span class="copy" title="Copy" onclick="copy('${esc(i.url)}')">${esc(i.url)}${icon('copy')}</span></div>
+          ${s.error?`<div class="err-msg" style="margin-top:6px">${esc(s.error)}</div>`:''}</div>
+        <div class="acts"><label class="row" style="gap:8px;color:var(--text2);font-size:13px">${i.enabled?'Enabled':'Disabled'}<span class="switch"><input type="checkbox" ${i.enabled?'checked':''} onchange="toggleIn(${i.id},this.checked)"><span></span></span></label>
+          <button class="btn sm" onclick="openInput(${i.id})">${icon('edit')}Edit</button><button class="btn sm danger" onclick="delIn(${i.id})">${icon('trash')}Delete</button></div></div>
+      <div class="hero-kpis">
+        <div><span>Bitrate</span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> <span style="display:inline">Mbps</span>${i.enabled?spark('h'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):''}</div>
+        <div><span>Programs</span><b>${all.length}</b></div>
+        <div><span>Outputs active</span><b>${act}</b> <span style="display:inline">/ ${outs.length}</span></div>
+        <div><span>TS ID</span><b class="mono" style="font-size:17px">${s.tsid||'—'}</b></div>
+        <div><span>Network ID</span><b class="mono" style="font-size:17px">${s.onid||'—'}</b></div></div></div>
+    <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${all.length}</span><span class="sp"></span>${all.length?tsearch('svc','Search programs…'):''}</div>${svcTable}</div>
     ${outCard('Outputs',outs,false)}`;
 }
 async function setOuts(ids,on){
   if(!ids.length)return;
-  try{await api('POST','api/outputs/enabled',{ids,enabled:on});toast(`${on?'Enabled':'Disabled'} ${ids.length} output${ids.length>1?'s':''}`)}catch(e){toast(e.message)}
+  try{await api('POST','api/outputs/enabled',{ids,enabled:on});toast(`${on?'Enabled':'Disabled'} ${ids.length} output${ids.length>1?'s':''}`)}catch(e){fail(e)}
   refresh();
 }
 async function delOuts(ids){
   if(!ids.length)return;
   if(!confirm(`Delete ${ids.length} output${ids.length>1?'s':''}${q.out?' matching "'+q.out+'"':''}? This cannot be undone.`))return;
-  try{await api('POST','api/outputs/delete',{ids});toast(`Deleted ${ids.length} output${ids.length>1?'s':''}`)}catch(e){toast(e.message)}
+  try{await api('POST','api/outputs/delete',{ids});toast(`Deleted ${ids.length} output${ids.length>1?'s':''}`)}catch(e){fail(e)}
   refresh();
 }
 async function control(a){
   const msg={start:'Start (enable) all inputs?',stop:'Stop (disable) all inputs? All outputs will stop until started again.',restart:'Restart all inputs and outputs? Streams will glitch for about a second.'}[a];
   if(!confirm(msg))return;
-  try{await api('POST','api/control/'+a);toast({start:'All inputs started',stop:'All inputs stopped',restart:'All inputs restarted'}[a])}catch(e){toast(e.message)}
+  try{await api('POST','api/control/'+a);toast({start:'All inputs started',stop:'All inputs stopped',restart:'All inputs restarted'}[a])}catch(e){fail(e)}
   refresh();
 }
 function chk(sid,on){on?checked.add(sid):checked.delete(sid);render()}
 function chkAll(on){const i=S.inputs.find(x=>x.id===sel);(i.status?.services||[]).filter(x=>!q.svc||match(q.svc,...svcText(x))).forEach(x=>on?checked.add(x.sid):checked.delete(x.sid));render()}
-function copy(t){navigator.clipboard?.writeText(t).then(()=>toast('Copied'))}
+function copy(t){navigator.clipboard?.writeText(t).then(()=>toast('Copied to clipboard'),()=>toast('Copy failed','err'))}
 
 async function bulkCreate(){
   const proto=$('#bk-proto').value,la=$('#bk-if').value,list=[...checked].sort((a,b)=>a-b);let ok=0;
   for(const sid of list){
     try{await api('POST','api/outputs',{input_id:sel,src_sid:sid,proto,localaddr:la});ok++}
-    catch(e){toast(`SID ${sid}: ${e.message}`);break}
+    catch(e){toast(`SID ${sid}: ${e.message}`,'err');break}
   }
   checked.clear();await refresh();if(ok) toast(`Created ${ok} output${ok>1?'s':''}`);
 }
@@ -428,10 +758,14 @@ async function bulkCreate(){
 // ----- modals -----
 function openM(id){$('#'+id).classList.add('show')}
 function closeM(id){$('#'+id).classList.remove('show')}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show'))});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show'));
+  if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)&&$('#app').style.display!=='none'){e.preventDefault();$('#gq').focus()}
+});
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)m.classList.remove('show')}));
 
 let miMode='disc';
-function miTab(t){miMode=t;document.querySelectorAll('#mi-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+function miTab(t){miMode=t;document.querySelectorAll('#mi-tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));
   ['disc','iface','manual','scan'].forEach(x=>$('#mi-'+x).style.display=x===t?'':'none');$('#mi-save').style.display=t==='scan'||t==='disc'?'none':''}
 // expandGroups turns "239.2.2.1-20:5000, 239.3.3.3" into ["239.2.2.1:5000", …, "239.3.3.3:1234"]
 const ip2n=s=>{const p=s.split('.').map(Number);if(p.length!==4||p.some(x=>!Number.isInteger(x)||x<0||x>255))throw new Error('bad address: '+s);return((p[0]<<24)>>>0)+(p[1]<<16)+(p[2]<<8)+p[3]};
@@ -485,13 +819,14 @@ const found={sc:[],dc:[]};
 function showFound(k,r){
   found[k]=r;
   const have=new Set(S.inputs.map(i=>i.url)),fresh=r.filter(x=>!have.has(x.url)).length;
-  $('#'+k+'-msg').innerHTML=`${r.length} stream${r.length===1?'':'s'} found`+(fresh?` <button class="btn sm primary" onclick="addAllFound('${k}')">Add all ${fresh}</button>`:'');
-  $('#'+k+'-res').innerHTML=r.length?`<table><tr><th>URL</th>${k==='dc'?'<th>Sender</th>':''}<th class="num">Mbps</th><th>Programs</th><th></th></tr>`+r.map(x=>`<tr><td class="mono">${esc(x.url)}</td>${k==='dc'?`<td class="mono">${esc(x.source||'')}</td>`:''}<td class="num mono">${mbps(x.kbps)}</td>
-    <td title="${esc((x.services||[]).map(s=>s.name||s.sid).join(', '))}">${(x.services||[]).length}</td>
-    <td style="text-align:right">${have.has(x.url)?'<span class="chip">added</span>':`<button class="btn sm primary f-add" onclick="addScanned(this,'${esc(x.url)}')">Add</button>`}</td></tr>`).join('')+'</table>':'';
+  $('#'+k+'-msg').innerHTML=`<b style="color:var(--text)">${r.length}</b> stream${r.length===1?'':'s'} found`+(fresh?` <button class="btn sm primary" onclick="addAllFound('${k}')">${icon('plus')}Add all ${fresh}</button>`:'');
+  r=sorted(k,r,{url:x=>x.url,src:x=>x.source||'',rate:x=>x.kbps,progs:x=>(x.services||[]).length});
+  $('#'+k+'-res').innerHTML=r.length?`<table><thead><tr>${th(k,'url','URL')}${k==='dc'?th(k,'src','Sender'):''}${th(k,'rate','Bitrate','num')}${th(k,'progs','Programs','num')}<th></th></tr></thead><tbody>`+r.map(x=>`<tr><td class="mono">${esc(x.url)}</td>${k==='dc'?`<td class="mono">${esc(x.source||'')}</td>`:''}<td class="num mono">${mbps(x.kbps)} Mbps</td>
+    <td class="num" title="${esc((x.services||[]).map(s=>s.name||s.sid).join(', '))}">${(x.services||[]).length}</td>
+    <td style="text-align:right">${have.has(x.url)?`<span class="pill ok">${icon('check')}Added</span>`:`<button class="btn sm primary f-add" onclick="addScanned(this,'${esc(x.url)}')">Add</button>`}</td></tr>`).join('')+'</tbody></table>':'';
 }
 async function runFind(k,path,body,busy){
-  const b=$('#'+k+'-go');b.disabled=true;$('#'+k+'-msg').textContent=busy;$('#'+k+'-res').innerHTML='';$('#mi-err').textContent='';
+  const b=$('#'+k+'-go');b.disabled=true;$('#'+k+'-msg').innerHTML=`<span class="spin"></span> ${esc(busy)}`;$('#'+k+'-res').innerHTML='';$('#mi-err').textContent='';
   try{showFound(k,await api('POST',path,body))}catch(e){$('#'+k+'-msg').textContent='';$('#mi-err').textContent=e.message}
   b.disabled=false;
 }
@@ -512,19 +847,21 @@ async function addBulk(urls,close){
     return r;
   }catch(e){$('#mi-err').textContent=e.message}
 }
+const addedPill=()=>`<span class="pill ok">${icon('check')}Added</span>`;
 async function addAllFound(k){
   const have=new Set(S.inputs.map(i=>i.url)),urls=found[k].map(x=>x.url).filter(u=>!have.has(u));
   if(!urls.length)return;
-  if(await addBulk(urls,false)){document.querySelectorAll(`#${k}-res .f-add`).forEach(b=>b.outerHTML='<span class="chip">added</span>');$('#'+k+'-msg').textContent=`${found[k].length} found · all added`}
+  if(await addBulk(urls,false)){document.querySelectorAll(`#${k}-res .f-add`).forEach(b=>b.outerHTML=addedPill());$('#'+k+'-msg').textContent=`${found[k].length} found · all added`}
 }
 async function addScanned(btn,url){
-  try{const r=await api('POST','api/inputs',{name:$('#mi-name').value||'',url,enabled:true});btn.outerHTML='<span class="chip">added</span>';sel=r.id;refresh()}
+  try{const r=await api('POST','api/inputs',{name:$('#mi-name').value||'',url,enabled:true});btn.outerHTML=addedPill();sel=r.id;refresh()}
   catch(e){$('#mi-err').textContent=e.message}
 }
-async function toggleIn(id,on){const i=S.inputs.find(x=>x.id===id);await api('PUT',`api/inputs/${id}`,{...i,status:undefined,enabled:on}).catch(e=>toast(e.message));refresh()}
+async function toggleIn(id,on){const i=S.inputs.find(x=>x.id===id);await api('PUT',`api/inputs/${id}`,{...i,status:undefined,enabled:on}).catch(fail);refresh()}
 async function delIn(id){const i=S.inputs.find(x=>x.id===id),n=S.outputs.filter(o=>o.input_id===id).length;
-  if(!confirm(`Delete input "${i.name}" and its ${n} output(s)?`))return;await api('DELETE',`api/inputs/${id}`).catch(e=>toast(e.message));sel=null;refresh()}
+  if(!confirm(`Delete input "${i.name}" and its ${n} output(s)?`))return;await api('DELETE',`api/inputs/${id}`).catch(fail);sel=null;refresh()}
 
+function setProto(v){$('#mo-proto-seg').dataset.v=v;document.querySelectorAll('#mo-proto-seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}
 function openOut(id,srcSid){
   editOut=id;newOut=srcSid??null;$('#mo-err').textContent='';
   const o=S.outputs.find(x=>x.id===id);
@@ -533,27 +870,27 @@ function openOut(id,srcSid){
     $('#mo-title').textContent='Edit output';$('#mo-src').textContent=`SID ${o.src_sid}`;
     $('#mo-name').value=o.name;$('#mo-prov').value=o.provider;
     $('#mo-sid').value=o.out_sid!==o.src_sid?o.out_sid:'';$('#mo-tsid').value=o.tsid!==o.out_sid?o.tsid:'';
-    $('#mo-proto').value=o.url.slice(0,3);$('#mo-addr').value=u.host;$('#mo-if').innerHTML=ifOpts(u.searchParams.get('localaddr')||'');
+    setProto(o.url.slice(0,3));$('#mo-addr').value=u.host;$('#mo-if').innerHTML=ifOpts(u.searchParams.get('localaddr')||'');
   }else{
     const i=S.inputs.find(x=>x.id===sel),sv=(i.status?.services||[]).find(x=>x.sid===srcSid)||{};
-    $('#mo-title').textContent='New output';$('#mo-src').textContent=`SID ${srcSid}`;
+    $('#mo-title').textContent='New output';$('#mo-src').textContent=`SID ${srcSid}${sv.name?' · '+sv.name:''}`;
     $('#mo-name').value=sv.name||'';$('#mo-prov').value=sv.provider||'';$('#mo-sid').value='';$('#mo-tsid').value='';
-    $('#mo-proto').value=S.settings.auto_proto||'udp';$('#mo-addr').value='';$('#mo-if').innerHTML=ifOpts(S.settings.auto_localaddr||'');
+    setProto(S.settings.auto_proto||'udp');$('#mo-addr').value='';$('#mo-if').innerHTML=ifOpts(S.settings.auto_localaddr||'');
   }
   openM('m-out');$('#mo-name').focus();
 }
 async function saveOutput(){
   const body={name:$('#mo-name').value,provider:$('#mo-prov').value,out_sid:+$('#mo-sid').value||0,tsid:+$('#mo-tsid').value||0,
-    proto:$('#mo-proto').value,addr:$('#mo-addr').value.trim(),localaddr:$('#mo-if').value};
+    proto:$('#mo-proto-seg').dataset.v||'udp',addr:$('#mo-addr').value.trim(),localaddr:$('#mo-if').value};
   try{
     if(editOut) await api('PUT',`api/outputs/${editOut}`,body);
     else await api('POST','api/outputs',{...body,input_id:sel,src_sid:newOut});
     closeM('m-out');await refresh();toast('Output saved');
   }catch(e){$('#mo-err').textContent=e.message}
 }
-async function toggleOut(id,on){await api('PUT',`api/outputs/${id}`,{enabled:on}).catch(e=>toast(e.message));refresh()}
+async function toggleOut(id,on){await api('PUT',`api/outputs/${id}`,{enabled:on}).catch(fail);refresh()}
 async function delOut(id){const o=S.outputs.find(x=>x.id===id);if(!confirm(`Delete output "${o.name}" (${o.url})?`))return;
-  await api('DELETE',`api/outputs/${id}`).catch(e=>toast(e.message));refresh()}
+  await api('DELETE',`api/outputs/${id}`).catch(fail);refresh()}
 
 function openSettings(){
   const s=S.settings;$('#st-err').textContent='';
