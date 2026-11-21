@@ -35,6 +35,7 @@ deb: build
 	  'Section: video' \
 	  'Priority: optional' \
 	  'Depends: systemd, passwd' \
+	  'Recommends: ffmpeg' \
 	  'Installed-Size: '"$$(du -sk $(DIST)/deb --exclude=DEBIAN | cut -f1)" \
 	  'Homepage: https://www.supermediatech.com' \
 	  'Description: Low-CPU MPTS to SPTS splitter with web UI' \

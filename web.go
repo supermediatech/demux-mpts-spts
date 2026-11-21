@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-//go:embed web/index.html
+//go:embed web/index.html web/hls.light.min.js
 var webFS embed.FS
 
 type App struct {
@@ -31,6 +31,7 @@ type App struct {
 	secret []byte
 	mu     sync.Mutex // serialises config changes
 	sys    sysSampler
+	prev   *previews
 }
 
 func NewApp(store *Store, engine *Engine, user, pass string) *App {
@@ -41,7 +42,9 @@ func NewApp(store *Store, engine *Engine, user, pass string) *App {
 		sec = hex.EncodeToString(b)
 		store.SetSetting("session_secret", sec)
 	}
-	return &App{store: store, engine: engine, user: user, pass: pass, secret: []byte(sec)}
+	a := &App{store: store, engine: engine, user: user, pass: pass, secret: []byte(sec), prev: newPreviews()}
+	go a.reapPreviews()
+	return a
 }
 
 // Apply loads the configuration from the database and pushes it to the engine.
@@ -81,7 +84,7 @@ func (a *App) Apply() error {
 			log.Printf("input %d: %v", in.ID, err)
 			continue
 		}
-		want = append(want, InputRun{ID: in.ID, URL: su, Outs: byIn[in.ID]})
+		want = append(want, InputRun{ID: in.ID, URL: su, Outs: append(byIn[in.ID], a.prev.cfgs(in.ID)...)})
 	}
 	a.engine.Sync(want)
 	return nil
@@ -128,6 +131,16 @@ func (a *App) Routes() http.Handler {
 	api("POST /api/scan", a.scan)
 	api("POST /api/discover", a.discover)
 	mux.HandleFunc("GET /api/playlist.m3u", a.auth(a.playlist))
+	api("POST /api/preview", a.startPreview)
+	api("POST /api/preview/{key}/ping", a.pingPreview)
+	api("POST /api/preview/{key}/stop", a.stopPreview)
+	mux.HandleFunc("GET /api/preview/{key}/{file}", a.auth(a.previewFile))
+	mux.HandleFunc("GET /hls.light.min.js", func(w http.ResponseWriter, r *http.Request) {
+		b, _ := webFS.ReadFile("web/hls.light.min.js")
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Write(b)
+	})
 	return mux
 }
 

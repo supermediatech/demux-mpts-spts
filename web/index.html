@@ -144,6 +144,13 @@ aside .flt{padding:0 14px 12px;border-bottom:1px solid var(--line)}
 .initem .spark{grid-column:2/4;height:22px;margin-top:4px}
 .initem .lead{display:flex;align-items:center;gap:8px}
 .initem.picked{background:var(--hover)}
+.pv-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
+.pv-wrap video{width:100%;height:100%;display:block;background:#000}
+.pv-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;color:#fff;font-size:14px;text-align:center;padding:20px;background:rgba(0,0,0,.55)}
+.pv-msg.err{color:#ffb4b4}
+.pv-msg[hidden]{display:none}
+.pv-spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:pvspin .8s linear infinite;flex:none}
+@keyframes pvspin{to{transform:rotate(360deg)}}
 .nav{padding:10px 8px 4px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line)}
 .nav button{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid transparent;border-radius:10px;background:none;color:var(--text);font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;text-align:left}
 .nav button:hover{background:var(--hover)}
@@ -482,6 +489,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="ft"><button class="btn" onclick="closeM('m-set')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button></div>
 </div></div>
 
+<!-- program preview -->
+<div class="modal-bg" id="m-prev"><div class="modal" style="width:min(760px,100%)">
+  <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-tv"/></svg></span><div style="flex:1;min-width:0"><h3 id="pv-title">Preview</h3><div class="muted" id="pv-sub" style="font-size:12.5px"></div></div><button class="ibtn sm" onclick="closeM('m-prev')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="bd">
+    <div class="pv-wrap"><video id="pv-video" controls playsinline></video><div class="pv-msg" id="pv-msg"></div></div>
+    <div class="hint" style="margin-top:10px">Low-latency HLS preview (H.264, up to 480p), encoded on the server by ffmpeg. It stops and its files are deleted when you close this window.</div>
+  </div>
+</div></div>
+
 <div id="toast"><svg class="ic"><use href="#i-check"/></svg><span></span></div>
 <div id="tip"></div>
 
@@ -728,7 +744,7 @@ function searchView(g){
   const svcs=[];S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
   const outs=S.outputs.filter(o=>match(g,...outText(o)));
   const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>(i.status?.services||[]).length}).map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${(i.status?.services||[]).length}</td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching inputs');
-  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}).map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right"><button class="btn sm" onclick="openOut(null,${x.sid},${i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching programs');
+  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}).map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid},${i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching programs');
   return `<div class="page-hd"><div><h1>Search results</h1><p>“${esc(g)}” · ${ins.length} inputs · ${svcs.length} programs · ${outs.length} outputs</p></div><span class="sp"></span><button class="btn" onclick="$('#gq').value='';render()">${icon('x')}Clear search</button></div>
     <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span><span class="sp"></span>${delInsBtn(ins,g)}</div>${inT}</div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${svcs.length}</span></div>${svT}</div>
@@ -752,7 +768,7 @@ function inputView(i){
       <td><span class="chip">${stype(x.type)}</span></td><td>${streamChips(x)}</td>
       <td class="num mono"><div class="ratecell">${mbps(x.kbps)} Mbps${rateBar(x.kbps/maxK*100)}</div></td>
       <td>${used[x.sid]?`<span class="pill ok">${icon('check')}${used[x.sid]}</span>`:''}</td>
-      <td style="text-align:right"><button class="btn sm" onclick="openOut(null,${x.sid})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
+      <td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
   if(all.length&&i.enabled) svcTable+=
     `<div class="bulk"><span class="count">${checked.size}</span><span class="text2">selected · create outputs with auto address</span><span class="sp"></span>
       <select id="bk-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
@@ -776,6 +792,44 @@ function inputView(i){
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${all.length}</span><span class="sp"></span>${all.length?tsearch('svc','Search programs…'):''}</div>${svcTable}</div>
     ${outCard('Outputs',outs,false)}`;
 }
+// ---------- program preview (ffmpeg LL-HLS on the server, hls.js here) ----------
+let PV=null;
+const playBtn=(iid,sid)=>`<button class="ibtn sm" style="margin-right:6px" title="Preview this program" aria-label="Preview" onclick="preview(${iid},${sid})">${icon('play')}</button>`;
+function pvMsg(t,kind){const m=$('#pv-msg');m.hidden=!t;m.className='pv-msg'+(kind==='err'?' err':'');m.innerHTML=t?(kind==='busy'?'<span class="pv-spin"></span>':'')+esc(t):''}
+function loadHls(){
+  if(window.Hls)return Promise.resolve();
+  return new Promise((ok,no)=>{const s=document.createElement('script');s.src='hls.light.min.js';s.onload=ok;s.onerror=()=>no(new Error('cannot load the player'));document.head.appendChild(s)});
+}
+async function preview(iid,sid){
+  closePreview();
+  const i=S.inputs.find(x=>x.id===iid),x=(i?.status?.services||[]).find(y=>y.sid===sid)||{};
+  $('#pv-title').textContent=x.name||`Service ${sid}`;$('#pv-sub').textContent=`${i?.name||''} · SID ${sid}${x.provider?' · '+x.provider:''}`;
+  const me=PV={key:null,hls:null,ping:null};
+  pvMsg('Starting preview…','busy');openM('m-prev');
+  let r;
+  try{await loadHls();r=await api('POST','api/preview',{input_id:iid,sid})}
+  catch(e){if(PV===me)pvMsg('Preview failed: '+e.message,'err');return}
+  if(PV!==me){fetch(`api/preview/${r.key}/stop`,{method:'POST'}).catch(()=>{});return} // closed while starting
+  me.key=r.key;
+  me.ping=setInterval(()=>api('POST',`api/preview/${r.key}/ping`).catch(()=>{if(PV===me)pvMsg('Preview ended','err')}),5000);
+  const v=$('#pv-video');v.muted=false;
+  const go=()=>{pvMsg('');v.play().catch(()=>{v.muted=true;v.play().catch(()=>{})})};
+  if(window.Hls&&Hls.isSupported()){
+    const h=me.hls=new Hls({lowLatencyMode:true,liveSyncDurationCount:2,liveMaxLatencyDurationCount:6,maxLiveSyncPlaybackRate:1.5,backBufferLength:10,manifestLoadingMaxRetry:6});
+    h.on(Hls.Events.MANIFEST_PARSED,go);
+    h.on(Hls.Events.ERROR,(_,d)=>{if(!d.fatal)return;if(d.type===Hls.ErrorTypes.MEDIA_ERROR)h.recoverMediaError();else pvMsg('Playback error: '+d.details,'err')});
+    h.loadSource(r.url);h.attachMedia(v);
+  }else if(v.canPlayType('application/vnd.apple.mpegurl')){v.src=r.url;v.addEventListener('loadedmetadata',go,{once:true})}
+  else pvMsg('This browser cannot play HLS','err');
+}
+function closePreview(){
+  const p=PV;PV=null;if(!p)return;
+  clearInterval(p.ping);p.hls?.destroy();
+  const v=$('#pv-video');v.pause();v.removeAttribute('src');v.load();
+  if(p.key)fetch(`api/preview/${p.key}/stop`,{method:'POST',keepalive:true}).catch(()=>{});
+}
+window.addEventListener('pagehide',closePreview);
+
 // ---------- all programs (every input) ----------
 function apRows(){
   const rows=[];
@@ -795,12 +849,12 @@ function programsView(){
   else if(!vis.length) table=emptyState('search','No matching programs');
   else table=`<div class="tablewrap"><table><thead><tr><th style="width:40px"><input type="checkbox" id="ap-all" ${allChk?'checked':''} onchange="apAll(this.checked)" aria-label="Select all shown programs"></th>${th('ap','input','Input')}${th('ap','sid','SID')}${th('ap','name','Program')}${th('ap','streams','Streams')}${th('ap','rate','Bitrate','num')}${th('ap','outs','Outputs')}<th></th></tr></thead><tbody>`+
     sorted('ap',vis,{input:r=>r.i.name,sid:r=>r.x.sid,name:r=>r.x.name||'',type:r=>stype(r.x.type),streams:r=>r.x.streams.length,rate:r=>r.x.kbps,outs:r=>r.used}).map(r=>`<tr><td><input type="checkbox" ${apSel.has(r.k)?'checked':''} onchange="apOne('${r.k}',this.checked)" aria-label="Select ${esc(r.x.name)}"></td>
-      <td style="max-width:170px"><a href="#" onclick="pick(${r.i.id});return false"><b>${esc(r.i.name)}</b></a><div class="muted mono" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.i.url)}">${esc(r.i.url)}</div></td>
+      <td style="max-width:150px"><a href="#" onclick="pick(${r.i.id});return false"><b>${esc(r.i.name)}</b></a><div class="muted mono" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.i.url)}">${esc(r.i.url)}</div></td>
       <td class="mono">${r.x.sid}</td><td><b>${esc(r.x.name||'—')}</b> <span class="chip" style="margin-left:4px">${stype(r.x.type)}</span>${r.x.provider?`<div class="muted" style="font-size:12px">${esc(r.x.provider)}</div>`:''}</td>
       <td>${streamChips(r.x)}</td>
       <td class="num mono"><div class="ratecell">${mbps(r.x.kbps)} Mbps${rateBar(r.x.kbps/maxK*100)}</div></td>
       <td>${r.used?`<span class="pill ok">${icon('check')}${r.used}</span>`:''}</td>
-      <td style="text-align:right"><button class="btn sm" onclick="openOut(null,${r.x.sid},${r.i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
+      <td style="text-align:right;white-space:nowrap">${playBtn(r.i.id,r.x.sid)}<button class="btn sm" onclick="openOut(null,${r.x.sid},${r.i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
   if(rows.length) table+=`<div class="bulk"><span class="count">${apSel.size}</span><span class="text2">selected${apSel.size>nVisSel?` (${apSel.size-nVisSel} hidden by filters)`:''} · create outputs with auto address</span><span class="sp"></span>
       ${apSel.size?`<button class="btn sm" onclick="apSel.clear();render()">Clear</button>`:''}
       <select id="ap-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
@@ -875,12 +929,12 @@ async function bulkCreate(){
 
 // ----- modals -----
 function openM(id){$('#'+id).classList.add('show')}
-function closeM(id){$('#'+id).classList.remove('show')}
+function closeM(id){$('#'+id).classList.remove('show');if(id==='m-prev')closePreview()}
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')document.querySelectorAll('.modal-bg.show').forEach(m=>m.classList.remove('show'));
+  if(e.key==='Escape')document.querySelectorAll('.modal-bg.show').forEach(m=>closeM(m.id));
   if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)&&$('#app').style.display!=='none'){e.preventDefault();$('#gq').focus()}
 });
-document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)m.classList.remove('show')}));
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)closeM(m.id)}));
 
 let miMode='disc';
 function miTab(t){miMode=t;document.querySelectorAll('#mi-tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));

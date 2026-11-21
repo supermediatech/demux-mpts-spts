@@ -93,5 +93,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	srv.Shutdown(ctx)
 	cancel()
+	app.StopPreviews()
 	engine.StopAll()
 }
