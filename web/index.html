@@ -453,8 +453,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="bd">
     <div class="note"><svg class="ic"><use href="#i-info"/></svg><div>Defaults for automatically generated outputs. Existing outputs keep their address.</div></div>
     <div class="form">
-      <label>First group</label><input type="text" id="st-group" class="mono">
-      <label>Port</label><input type="number" id="st-port">
+      <label>First group</label><input type="text" id="st-group" class="mono" oninput="stepHint()">
+      <label>Port</label><input type="number" id="st-port" oninput="stepHint()">
+      <label>Auto increment</label><div><select id="st-step" onchange="stepHint()"><option value="ip">IP address (same port)</option><option value="port">Port (same IP address)</option></select><div class="hint" id="st-step-hint"></div></div>
       <label>Protocol</label><select id="st-proto"><option>udp</option><option>rtp</option></select>
       <label>Interface</label><select id="st-if"></select>
       <label>Multicast TTL</label><input type="number" id="st-ttl">
@@ -947,10 +948,16 @@ async function delOut(id){const o=S.outputs.find(x=>x.id===id);if(!confirm(`Dele
 function openSettings(){
   const s=S.settings;$('#st-err').textContent='';
   $('#st-group').value=s.auto_group;$('#st-port').value=s.auto_port;$('#st-proto').value=s.auto_proto;$('#st-ttl').value=s.ttl;
+  $('#st-step').value=s.auto_step||'ip';stepHint();
   $('#st-if').innerHTML=ifOpts(s.auto_localaddr);openM('m-set');
 }
+function stepHint(){
+  const g=$('#st-group').value.trim()||'239.100.0.1',p=+$('#st-port').value||1234,m=g.match(/^(\d+\.\d+\.\d+\.)(\d+)$/);
+  const ex=$('#st-step').value==='port'?[0,1,2].map(i=>`${g}:${p+i}`):m?[0,1,2].map(i=>`${m[1]}${+m[2]+i}:${p}`):[];
+  $('#st-step-hint').textContent=ex.length?'Next outputs: '+ex.join(', ')+', …':'';
+}
 async function saveSettings(){
-  try{await api('PUT','api/settings',{auto_group:$('#st-group').value,auto_port:$('#st-port').value,auto_proto:$('#st-proto').value,auto_localaddr:$('#st-if').value,ttl:$('#st-ttl').value});
+  try{await api('PUT','api/settings',{auto_group:$('#st-group').value,auto_port:$('#st-port').value,auto_step:$('#st-step').value,auto_proto:$('#st-proto').value,auto_localaddr:$('#st-if').value,ttl:$('#st-ttl').value});
     closeM('m-set');await refresh();toast('Settings saved')}catch(e){$('#st-err').textContent=e.message}
 }
 async function restoreBackup(el){

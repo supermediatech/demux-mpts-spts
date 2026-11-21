@@ -41,6 +41,7 @@ CREATE INDEX IF NOT EXISTS outputs_input ON outputs(input_id);
 var defaultSettings = map[string]string{
 	"auto_group":     "239.100.0.1",
 	"auto_port":      "1234",
+	"auto_step":      "ip", // "ip": next group, same port; "port": same group, next port
 	"auto_proto":     "udp",
 	"auto_localaddr": "",
 	"ttl":            "16",
@@ -275,6 +276,8 @@ func (s *Store) DeleteOutput(id int64) error {
 
 // NextAutoAddr returns the first group:port at or after the configured base
 // whose ip:port is not used by any output (on any interface) or in skip.
+// With auto_step "ip" the group increases and the port stays fixed; with
+// "port" the group stays fixed and the port increases.
 func (s *Store) NextAutoAddr(skip map[netip.AddrPort]bool) (netip.AddrPort, error) {
 	used := map[netip.AddrPort]bool{}
 	for k := range skip {
@@ -296,6 +299,14 @@ func (s *Store) NextAutoAddr(skip map[netip.AddrPort]bool) (netip.AddrPort, erro
 	port, _ := strconv.Atoi(s.Setting("auto_port"))
 	if port <= 0 || port > 65535 {
 		return netip.AddrPort{}, fmt.Errorf("invalid auto_port setting")
+	}
+	if s.Setting("auto_step") == "port" {
+		for p := port; p <= 65535; p++ {
+			if ap := netip.AddrPortFrom(base, uint16(p)); !used[ap] {
+				return ap, nil
+			}
+		}
+		return netip.AddrPort{}, errors.New("no free port left on the auto group")
 	}
 	for a, i := base, 0; i < 1<<16 && a.Is4(); a, i = a.Next(), i+1 {
 		if b := a.As4(); b[3] == 0 || b[3] == 255 {

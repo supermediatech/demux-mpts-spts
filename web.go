@@ -286,6 +286,10 @@ func validSetting(k, v string) (bool, error) {
 		if _, err := strconv.Atoi(v); err != nil || parsePort(v, 0) == 0 {
 			return true, fmt.Errorf("invalid %s", k)
 		}
+	case "auto_step":
+		if v != "ip" && v != "port" {
+			return true, errors.New("auto increment must be ip or port")
+		}
 	case "auto_proto":
 		if v != "udp" && v != "rtp" {
 			return true, errors.New("protocol must be udp or rtp")

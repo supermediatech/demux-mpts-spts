@@ -70,7 +70,7 @@ Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), 
   URL form:
   `udp://239.2.2.2:1234?localaddr=192.168.10.10` (optionally `&sources=<ip>` for SSM). `rtp://` inputs are accepted too, and an RTP header is detected and stripped automatically.
 - **Programs**: each running input lists its services (name and provider from the SDT, plus streams and bitrate). Tick several and use **Create outputs**, or use **+ Output** on one row.
-- **Outputs**: UDP or RTP, with `localaddr` choosing the egress interface. Leave the address empty to allocate the next free `ip:port` from the pool in **Settings**, or type one. Service ID and TS ID are optional overrides.
+- **Outputs**: UDP or RTP, with `localaddr` choosing the egress interface. Leave the address empty to allocate the next free `ip:port` from the pool in **Settings**, or type one. **Auto increment** in Settings chooses how the pool grows: by **IP address** (239.100.0.1:1234, 239.100.0.2:1234, …) or by **port** (239.100.0.1:1234, 239.100.0.1:1235, …). Addresses already in use are skipped. Service ID and TS ID are optional overrides.
 - **Playlist**: downloads an M3U of every enabled output.
 - **Start all / Stop all** (top bar) enable or disable every input. This is saved, so it persists across restarts. **Restart all** reopens every socket and leaves the configuration unchanged.
 - **Select inputs** with the checkboxes in the sidebar (the header checkbox selects every input the filter shows), then use **Delete** to remove the selected inputs and their outputs.
