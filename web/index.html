@@ -318,6 +318,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M10 15V9M14 15V9"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
   <symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.1 4.9A10 10 0 1 1 12 2M16.2 7.8A6 6 0 1 0 18 12M12 12l7-7"/><circle cx="12" cy="12" r="1.5"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></symbol>
   <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/></symbol>
@@ -458,6 +460,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
       <label>Multicast TTL</label><input type="number" id="st-ttl">
       <label>Theme</label><div class="theme-slot-set"></div>
     </div><div class="err-msg" id="st-err"></div>
+    <div class="note" style="margin-top:18px"><svg class="ic"><use href="#i-layers"/></svg><div><b>Backup &amp; restore</b><br>The backup is a JSON file with every input, output and setting. Restoring a file <b>replaces</b> the current inputs and outputs.</div></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <a class="btn" href="api/backup" download style="color:inherit;text-decoration:none"><svg class="ic"><use href="#i-download"/></svg>Download backup</a>
+      <button class="btn" onclick="$('#st-restore').click()"><svg class="ic"><use href="#i-upload"/></svg>Restore from file…</button>
+      <input type="file" id="st-restore" accept=".json,application/json" hidden onchange="restoreBackup(this)">
+    </div>
   </div>
   <div class="ft"><button class="btn" onclick="closeM('m-set')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button></div>
 </div></div>
@@ -944,6 +952,15 @@ function openSettings(){
 async function saveSettings(){
   try{await api('PUT','api/settings',{auto_group:$('#st-group').value,auto_port:$('#st-port').value,auto_proto:$('#st-proto').value,auto_localaddr:$('#st-if').value,ttl:$('#st-ttl').value});
     closeM('m-set');await refresh();toast('Settings saved')}catch(e){$('#st-err').textContent=e.message}
+}
+async function restoreBackup(el){
+  const f=el.files[0];el.value='';if(!f)return;
+  let b;try{b=JSON.parse(await f.text())}catch(e){$('#st-err').textContent='Not a valid JSON file';return}
+  if(b?.format!=='mpts2spts-backup'){$('#st-err').textContent='Not an mpts2spts backup file';return}
+  const ni=(b.inputs||[]).length,no=(b.outputs||[]).length;
+  if(!confirm(`Restore "${f.name}"${b.created?' from '+new Date(b.created).toLocaleString():''}?\n\nIt has ${ni} input(s) and ${no} output(s).\nThis REPLACES the current ${S.inputs.length} input(s) and ${S.outputs.length} output(s). Download a backup first if you may need them.`))return;
+  try{const r=await api('POST','api/restore',b);sel=null;inSel.clear();checked.clear();closeM('m-set');await refresh();
+    toast(`Restored ${r.inputs} input(s) and ${r.outputs} output(s)`)}catch(e){$('#st-err').textContent='Restore failed: '+e.message}
 }
 $('#yr').textContent=new Date().getFullYear();
 start();

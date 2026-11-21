@@ -122,6 +122,8 @@ func (a *App) Routes() http.Handler {
 	api("DELETE /api/outputs/{id}", a.deleteOutput)
 	api("POST /api/outputs/enabled", a.setOutputsEnabled)
 	api("POST /api/outputs/delete", a.deleteOutputs)
+	api("POST /api/restore", a.restore)
+	mux.HandleFunc("GET /api/backup", a.auth(a.backup))
 	api("POST /api/control/{action}", a.control)
 	api("POST /api/scan", a.scan)
 	api("POST /api/discover", a.discover)
@@ -258,26 +260,11 @@ func (a *App) saveSettings(r *http.Request) (any, error) {
 	defer a.mu.Unlock()
 	for k, v := range req {
 		v = strings.TrimSpace(v)
-		switch k {
-		case "auto_group":
-			if ad, err := netip.ParseAddr(v); err != nil || !ad.Is4() || !ad.IsMulticast() {
-				return nil, errors.New("auto group must be an IPv4 multicast address")
-			}
-		case "auto_port", "ttl":
-			if _, err := strconv.Atoi(v); err != nil || parsePort(v, 0) == 0 {
-				return nil, fmt.Errorf("invalid %s", k)
-			}
-		case "auto_proto":
-			if v != "udp" && v != "rtp" {
-				return nil, errors.New("protocol must be udp or rtp")
-			}
-		case "auto_localaddr":
-			if v != "" {
-				if ad, err := netip.ParseAddr(v); err != nil || !ad.Is4() {
-					return nil, errors.New("invalid local address")
-				}
-			}
-		default:
+		ok, err := validSetting(k, v)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
 			continue
 		}
 		if err := a.store.SetSetting(k, v); err != nil {
@@ -285,6 +272,34 @@ func (a *App) saveSettings(r *http.Request) (any, error) {
 		}
 	}
 	return nil, a.Apply()
+}
+
+// validSetting reports whether k is a user-editable setting and, if so,
+// whether v is an acceptable value for it.
+func validSetting(k, v string) (bool, error) {
+	switch k {
+	case "auto_group":
+		if ad, err := netip.ParseAddr(v); err != nil || !ad.Is4() || !ad.IsMulticast() {
+			return true, errors.New("auto group must be an IPv4 multicast address")
+		}
+	case "auto_port", "ttl":
+		if _, err := strconv.Atoi(v); err != nil || parsePort(v, 0) == 0 {
+			return true, fmt.Errorf("invalid %s", k)
+		}
+	case "auto_proto":
+		if v != "udp" && v != "rtp" {
+			return true, errors.New("protocol must be udp or rtp")
+		}
+	case "auto_localaddr":
+		if v != "" {
+			if ad, err := netip.ParseAddr(v); err != nil || !ad.Is4() {
+				return true, errors.New("invalid local address")
+			}
+		}
+	default:
+		return false, nil
+	}
+	return true, nil
 }
 
 func (a *App) saveInput(r *http.Request) (any, error) {

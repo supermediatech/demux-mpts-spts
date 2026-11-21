@@ -76,6 +76,7 @@ Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), 
 - **Select inputs** with the checkboxes in the sidebar (the header checkbox selects every input the filter shows), then use **Delete** to remove the selected inputs and their outputs.
 - **Delete all** on the dashboard's Inputs card removes every input (and its outputs). In search results it removes only the matching inputs.
 - On each outputs table, the **All** toggle enables or disables every output shown, and **Delete all** removes every output shown. Both act on the current search results, so you can search first and then act on a subset.
+- **Backup & restore** (in **Settings**): **Download backup** saves every input, output and setting to a JSON file. **Restore from file…** loads one back and replaces the current inputs and outputs. The file is checked before anything changes, so a bad file leaves the configuration as it was. Over the API: `GET /api/backup` and `POST /api/restore` with the file as the request body.
 - **Search**: the box in the top bar searches inputs, programs and outputs together. Each table also has its own search box, and the sidebar has an input filter.
 - The top bar shows host CPU, host RAM and the app's own CPU (% of one core) and memory. The dashboard adds live KPI tiles and bitrate/CPU sparklines; hover over a sparkline to read its values.
 - **Tables sort** when you click a column header; click it again to reverse the order. Each browser remembers the order you chose.
