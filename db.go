@@ -175,6 +175,22 @@ func (s *Store) DeleteInput(id int64) error {
 	return err
 }
 
+// DeleteInputs removes several inputs (and, via ON DELETE CASCADE, their
+// outputs) in one transaction.
+func (s *Store) DeleteInputs(ids []int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, id := range ids {
+		if _, err := tx.Exec(`DELETE FROM inputs WHERE id=?`, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 const outCols = `id, input_id, src_sid, out_sid, tsid, onid, name, provider, service_type, url, enabled`
 
 func scanOutput(sc interface{ Scan(...any) error }) (Output, error) {

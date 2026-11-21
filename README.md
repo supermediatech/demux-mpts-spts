@@ -73,6 +73,8 @@ Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), 
 - **Outputs**: UDP or RTP, with `localaddr` choosing the egress interface. Leave the address empty to allocate the next free `ip:port` from the pool in **Settings**, or type one. Service ID and TS ID are optional overrides.
 - **Playlist**: downloads an M3U of every enabled output.
 - **Start all / Stop all** (top bar) enable or disable every input. This is saved, so it persists across restarts. **Restart all** reopens every socket and leaves the configuration unchanged.
+- **Select inputs** with the checkboxes in the sidebar (the header checkbox selects every input the filter shows), then use **Delete** to remove the selected inputs and their outputs.
+- **Delete all** on the dashboard's Inputs card removes every input (and its outputs). In search results it removes only the matching inputs.
 - On each outputs table, the **All** toggle enables or disables every output shown, and **Delete all** removes every output shown. Both act on the current search results, so you can search first and then act on a subset.
 - **Search**: the box in the top bar searches inputs, programs and outputs together. Each table also has its own search box, and the sidebar has an input filter.
 - The top bar shows host CPU, host RAM and the app's own CPU (% of one core) and memory. The dashboard adds live KPI tiles and bitrate/CPU sparklines; hover over a sparkline to read its values.

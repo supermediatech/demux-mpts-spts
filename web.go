@@ -116,6 +116,7 @@ func (a *App) Routes() http.Handler {
 	api("PUT /api/inputs/{id}", a.saveInput)
 	api("POST /api/inputs/bulk", a.addInputs)
 	api("DELETE /api/inputs/{id}", a.deleteInput)
+	api("POST /api/inputs/delete", a.deleteInputs)
 	api("POST /api/outputs", a.saveOutput)
 	api("PUT /api/outputs/{id}", a.saveOutput)
 	api("DELETE /api/outputs/{id}", a.deleteOutput)
@@ -355,6 +356,21 @@ func (a *App) deleteInput(r *http.Request) (any, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if err := a.store.DeleteInput(pathID(r)); err != nil {
+		return nil, err
+	}
+	return nil, a.Apply()
+}
+
+func (a *App) deleteInputs(r *http.Request) (any, error) {
+	var req struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := decode(r, &req); err != nil {
+		return nil, err
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if err := a.store.DeleteInputs(req.IDs); err != nil {
 		return nil, err
 	}
 	return nil, a.Apply()

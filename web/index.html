@@ -142,6 +142,10 @@ aside .flt{padding:0 14px 12px;border-bottom:1px solid var(--line)}
 .initem .rate{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
 .initem .u{grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
 .initem .spark{grid-column:2/4;height:22px;margin-top:4px}
+.initem .lead{display:flex;align-items:center;gap:8px}
+.initem.picked{background:var(--hover)}
+.inbar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--text2)}
+.inbar label{display:flex;align-items:center;gap:8px;cursor:pointer}
 main{padding:22px 26px 30px;min-width:0}
 footer{padding:12px 24px;border-top:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 
@@ -363,6 +367,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <aside>
     <div class="hd"><h3>Inputs</h3><span class="count" id="in-count">0</span><span class="sp"></span><button class="btn primary sm" onclick="openInput()"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
     <div class="flt"><div class="field-ic"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="filter" placeholder="Filter inputs…" oninput="render()"></div></div>
+    <div class="inbar" id="inbar"></div>
     <div class="inlist" id="inlist"></div>
   </aside>
   <main id="main"></main>
@@ -465,7 +470,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon=(n,c='')=>`<svg class="ic ${c}"><use href="#i-${n}"/></svg>`;
 let bk={};const bkP=()=>bk.proto??S.settings.auto_proto;
-let S={inputs:[],outputs:[],settings:{}}, IFS=[], sel=null, checked=new Set(), editIn=null, editOut=null, newOut=null, timer=null;
+let S={inputs:[],outputs:[],settings:{}}, IFS=[], sel=null, checked=new Set(), inSel=new Set(), editIn=null, editOut=null, newOut=null, timer=null;
 
 // ---------- theme: auto (follow OS) | light | dark, remembered per browser ----------
 function getTheme(){try{return localStorage.getItem('theme')||'auto'}catch(e){return 'auto'}}
@@ -618,10 +623,16 @@ function render(){
   if(sel!==null&&!S.inputs.find(i=>i.id===sel)) sel=null;
   $('#in-count').textContent=S.inputs.length;
   const list=S.inputs.filter(i=>!f||(i.name+i.url).toLowerCase().includes(f));
+  for(const id of [...inSel]) if(!S.inputs.find(i=>i.id===id)) inSel.delete(id);
+  const nSel=list.filter(i=>inSel.has(i.id)).length,hidden=inSel.size-nSel;
+  $('#inbar').style.display=list.length?'':'none';
+  $('#inbar').innerHTML=`<label title="Select all shown inputs"><input type="checkbox" ${nSel&&nSel===list.length?'checked':''} onchange="inSelAll(this.checked)">${inSel.size?`${inSel.size} selected${hidden?` (${hidden} hidden by filter)`:''}`:'Select all'}</label><span class="sp" style="flex:1"></span>
+    ${inSel.size?`<button class="btn sm" onclick="inSel.clear();render()">Clear</button><button class="btn sm danger" onclick="delSelIns()">${icon('trash')}Delete</button>`:''}`;
+  const cb=$('#inbar input');if(cb)cb.indeterminate=nSel>0&&nSel<list.length;
   $('#inlist').innerHTML=list.map(i=>{
     const st=stateOf(i),n=S.outputs.filter(o=>o.input_id===i.id).length;
-    return `<div class="initem ${i.id===sel&&!g?'sel':''}" onclick="pick(${i.id})">
-      <span class="dot ${st}" title="${stateTxt[st]||st}${i.status?.down_since?' · down '+dur(Date.now()/1000-i.status.down_since)+', auto-reconnecting':''}"></span><span class="nm">${esc(i.name)}</span>
+    return `<div class="initem ${i.id===sel&&!g?'sel':''} ${inSel.has(i.id)?'picked':''}" onclick="pick(${i.id})">
+      <span class="lead"><input type="checkbox" ${inSel.has(i.id)?'checked':''} onclick="event.stopPropagation()" onchange="inSelOne(${i.id},this.checked)" aria-label="Select ${esc(i.name)}"><span class="dot ${st}" title="${stateTxt[st]||st}${i.status?.down_since?' · down '+dur(Date.now()/1000-i.status.down_since)+', auto-reconnecting':''}"></span></span><span class="nm">${esc(i.name)}</span>
       <span class="rate">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'off'}</span>
       <span></span><span class="u muted mono">${esc(i.url)} · ${n} out</span>
       ${i.enabled?`<span></span>${spark('side'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps')}`:''}</div>`}).join('')||emptyState('inbox',S.inputs.length?'No match':'No inputs yet');
@@ -684,7 +695,7 @@ function overview(){
       ${i.enabled?spark('g'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):'<div class="spark" style="height:34px"></div>'}
       <div class="f"><span><b>${(s.services||[]).length}</b> programs · <b>${n}</b> outputs</span><span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> Mbps</span></div></div>`}).join('');
   return head+`<div class="kpis">${tiles}</div>
-    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${S.inputs.length}</span></div><div class="ingrid">${grid}</div></div>
+    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${S.inputs.length}</span><span class="sp"></span>${delInsBtn(S.inputs)}</div><div class="ingrid">${grid}</div></div>
     ${outCard('All outputs',S.outputs,true)}`;
 }
 function searchView(g){
@@ -694,7 +705,7 @@ function searchView(g){
   const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>(i.status?.services||[]).length}).map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${(i.status?.services||[]).length}</td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching inputs');
   const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}).map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right"><button class="btn sm" onclick="sel=${i.id};openOut(null,${x.sid})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching programs');
   return `<div class="page-hd"><div><h1>Search results</h1><p>“${esc(g)}” · ${ins.length} inputs · ${svcs.length} programs · ${outs.length} outputs</p></div><span class="sp"></span><button class="btn" onclick="$('#gq').value='';render()">${icon('x')}Clear search</button></div>
-    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span></div>${inT}</div>
+    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span><span class="sp"></span>${delInsBtn(ins,g)}</div>${inT}</div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${svcs.length}</span></div>${svT}</div>
     ${outCard('Outputs',outs,true)}`;
 }
@@ -743,6 +754,24 @@ function inputView(i){
 async function setOuts(ids,on){
   if(!ids.length)return;
   try{await api('POST','api/outputs/enabled',{ids,enabled:on});toast(`${on?'Enabled':'Disabled'} ${ids.length} output${ids.length>1?'s':''}`)}catch(e){fail(e)}
+  refresh();
+}
+function delInsBtn(list,g=''){return `<button class="btn sm danger" ${list.length?'':'disabled'} onclick='delIns(${JSON.stringify(list.map(i=>i.id))},${JSON.stringify(g).replace(/'/g,'&#39;')})'>${icon('trash')}Delete all</button>`}
+async function delIns(ids,g=''){
+  if(!ids.length)return;
+  const n=S.outputs.filter(o=>ids.includes(o.input_id)).length,s=ids.length>1?'s':'';
+  if(!confirm(`Delete ${ids.length} input${s}${g?' matching "'+g+'"':''} and their ${n} output(s)? This cannot be undone.`))return;
+  try{await api('POST','api/inputs/delete',{ids});toast(`Deleted ${ids.length} input${s}`);if(ids.includes(sel))sel=null}catch(e){fail(e)}
+  refresh();
+}
+function inSelOne(id,on){on?inSel.add(id):inSel.delete(id);render()}
+function inSelAll(on){const f=$('#filter').value.toLowerCase();S.inputs.filter(i=>!f||(i.name+i.url).toLowerCase().includes(f)).forEach(i=>on?inSel.add(i.id):inSel.delete(i.id));render()}
+async function delSelIns(){
+  const ids=[...inSel];if(!ids.length)return;
+  const n=S.outputs.filter(o=>ids.includes(o.input_id)).length,s=ids.length>1?'s':'';
+  const names=S.inputs.filter(i=>inSel.has(i.id)).map(i=>'• '+i.name);
+  if(!confirm(`Delete ${ids.length} selected input${s} and their ${n} output(s)? This cannot be undone.\n\n${names.slice(0,10).join('\n')}${names.length>10?`\n…and ${names.length-10} more`:''}`))return;
+  try{await api('POST','api/inputs/delete',{ids});toast(`Deleted ${ids.length} input${s}`);if(ids.includes(sel))sel=null;inSel.clear()}catch(e){fail(e)}
   refresh();
 }
 async function delOuts(ids){
