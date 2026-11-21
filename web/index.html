@@ -537,6 +537,7 @@ const HMAX=90,H={in:[],out:[],cpu:[],inp:{}};
 function pushH(arr,v){arr.push({t:Date.now(),v});if(arr.length>HMAX)arr.shift()}
 async function refresh(){
   S=await api('GET','api/state');
+  S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{x.streams||=[]}));
   let inR=0,outR=0;
   S.inputs.forEach(i=>{const k=i.enabled?i.status?.kbps||0:0;inR+=k;pushH(H.inp[i.id]??=[],k)});
   S.outputs.forEach(o=>outR+=o.enabled?o.status?.kbps||0:0);

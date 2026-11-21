@@ -787,7 +787,7 @@ func (w *worker) publish(dt float64) {
 	w.stampWatchdog(&st)
 	for _, pr := range w.progs {
 		si := ServiceInfo{SID: pr.sid, PMTPID: pr.pmtPID, PCRPID: pr.pcrPID, Type: 1,
-			Streams: append([]StreamInfo(nil), pr.streams...)}
+			Streams: append([]StreamInfo{}, pr.streams...)} // [] not null before the PMT is read
 		if e, ok := w.sdtSvc[pr.sid]; ok {
 			si.Name, si.Provider, si.Type = e.name, e.provider, e.stype
 		}
