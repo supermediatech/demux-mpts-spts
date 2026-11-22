@@ -175,6 +175,8 @@ footer{padding:12px 24px;border-top:1px solid var(--line);background:var(--panel
 .tsearch input{padding-top:5px;padding-bottom:5px;font-size:13px}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:20px}
+a.tile{color:inherit;text-decoration:none;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-decoration:none}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .tile .lbl{display:flex;align-items:center;gap:7px;color:var(--text2);font-size:12.5px;font-weight:500}
 .tile .lbl .ic{color:var(--muted)}
@@ -274,6 +276,16 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .err-msg{color:var(--crit);font-size:13px;margin-top:12px;min-height:1em}
 .found{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .found:empty{display:none}
+.modal.xl{width:min(1180px,100%);max-height:88vh}
+.pk-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel2);flex-wrap:wrap;font-size:13px}
+.pk-tbl{max-height:52vh;overflow:auto}
+.pk-tbl td{white-space:normal}
+.pk-tbl td.mono,.pk-tbl td.num{white-space:nowrap}
+.pk-tbl tbody tr{cursor:pointer}
+.pk-tbl tbody tr.pk-added{cursor:default;opacity:.65}
+.pk-tbl .pk-name{min-width:220px}
+.chip.ch i{background:var(--muted)}.chip.ch.on i{background:var(--good)}
+.intile .chs{display:flex;flex-wrap:wrap;gap:0;min-height:20px}
 .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:sp .8s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 
@@ -383,7 +395,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <aside>
     <nav class="nav" aria-label="Pages">
       <button id="nav-home" onclick="goHome()"><svg class="ic"><use href="#i-grid"/></svg>Dashboard</button>
+      <button id="nav-inputs" onclick="goView('inputs')"><svg class="ic"><use href="#i-in"/></svg>All inputs<span class="count" id="nav-inputs-n">0</span></button>
       <button id="nav-progs" onclick="goProgs()"><svg class="ic"><use href="#i-tv"/></svg>All programs<span class="count" id="nav-progs-n">0</span></button>
+      <button id="nav-outputs" onclick="goView('outputs')"><svg class="ic"><use href="#i-out"/></svg>All outputs<span class="count" id="nav-outputs-n">0</span></button>
     </nav>
     <div class="hd"><h3>Inputs</h3><span class="count" id="in-count">0</span><span class="sp"></span><button class="btn primary sm" onclick="openInput()"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
     <div class="flt"><div class="field-ic"><svg class="ic"><use href="#i-search"/></svg><input type="text" id="filter" placeholder="Filter inputs…" oninput="render()"></div></div>
@@ -396,7 +410,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 </div>
 
 <!-- input modal -->
-<div class="modal-bg" id="m-input"><div class="modal">
+<div class="modal-bg" id="m-input"><div class="modal xl">
   <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-in"/></svg></span><h3 id="mi-title">Add input</h3><button class="ibtn sm" onclick="closeM('m-input')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
   <div class="bd">
     <div class="seg tabs" id="mi-tabs" role="tablist">
@@ -421,8 +435,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
       <label>URL</label><input type="text" id="mi-url" class="mono" placeholder="udp://239.2.2.2:1234?localaddr=192.168.10.10">
       <div class="hint">udp:// or rtp://, optional <span class="mono">localaddr=</span> and <span class="mono">sources=</span></div>
     </div>
+    <div id="mi-ch" style="margin-top:18px;display:none">
+      <div class="note"><svg class="ic"><use href="#i-tv"/></svg><div><b>Channels to keep.</b> Only ticked channels are shown in the dashboard, the program lists and All programs. Ticking every channel keeps all of them, including ones the stream adds later.</div></div>
+      <div id="ed-res" class="found"></div>
+    </div>
     <div id="mi-disc" style="margin-top:12px">
-      <div class="note"><svg class="ic"><use href="#i-info"/></svg><div>Listens on the interface and finds every TS stream (UDP or RTP, any IP, any port). Multicast behind an IGMP-snooping switch only shows up once joined. Use <b>Scan range</b> for those.</div></div>
+      <div class="note"><svg class="ic"><use href="#i-info"/></svg><div>Listens on the interface and finds every TS stream (UDP or RTP, any IP, any port) and lists its channels. Tick the channels you want: only their streams are added, and only those channels are kept. Multicast behind an IGMP-snooping switch only shows up once joined. Use <b>Scan range</b> for those.</div></div>
       <div class="form">
         <label>Interface</label><select id="dc-if"></select>
         <label>Listen (s)</label><input type="number" id="dc-sec" value="5" min="2" max="30">
@@ -542,6 +560,7 @@ async function doLogin(e){
 async function logout(){await api('POST','api/logout');showLogin()}
 
 async function start(){
+  applyRoute();
   try{await refresh()}catch(e){return}
   $('#login').style.display='none';$('#app').style.display='flex';
   IFS=await api('GET','api/interfaces');
@@ -568,6 +587,10 @@ const statePill=st=>{const m={ok:['ok','check'],nosignal:['warn','alert'],error:
   return `<span class="pill ${m[0]}">${icon(m[1])}${stateTxt[st]||st}</span>`};
 const stype=t=>({1:'TV',2:'Radio',0x11:'HD TV',0x16:'SD TV',0x19:'HD TV',0x1F:'UHD TV',0x0A:'Radio',0x0C:'Data'}[t]||'Type '+t);
 function ifOpts(v){return '<option value="">Any (default route)</option>'+IFS.map(i=>`<option value="${esc(i.addr)}" ${i.addr===v?'selected':''}>${esc(i.name)} — ${esc(i.addr)}</option>`).join('')}
+// channels the user chose to keep on an input (empty selection = all)
+function svcsOf(i){const all=i.status?.services||[];if(!i.services?.length)return all;const k=new Set(i.services);return all.filter(x=>k.has(x.sid))}
+// radio-like: has audio but no video (or, before the PMT is read, a radio service type)
+const isAudioOnly=x=>{if(!x)return false;const s=x.streams||[];return s.length?!s.some(e=>e.kind==='video')&&s.some(e=>e.kind==='audio'):x.type===2||x.type===0x0A};
 // "2m 13s" style durations for the watchdog line
 const dur=sec=>{sec=Math.max(0,Math.round(sec));const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),x=sec%60;
   return d?`${d}d ${h}h`:h?`${h}h ${m}m`:m?`${m}m ${x}s`:`${x}s`};
@@ -581,7 +604,7 @@ function watchLine(i){
 const emptyState=(ic,title,msg='')=>`<div class="empty">${icon(ic)}<b>${title}</b>${msg}</div>`;
 
 // q holds per-table searches; they survive the periodic re-render
-const q={svc:'',out:'',ap:''};
+const q={svc:'',out:'',ap:'',inl:''};
 const match=(query,...fields)=>{const h=fields.join(' ').toLowerCase();return query.toLowerCase().split(/\s+/).filter(Boolean).every(t=>h.includes(t))};
 const outText=o=>{const i=S.inputs.find(x=>x.id===o.input_id);return [o.name,o.provider,o.url,o.src_sid,o.out_sid,i?.name||'',o.enabled?'enabled':'disabled']};
 const svcText=x=>[x.name,x.provider,x.sid,stype(x.type),...x.streams.map(e=>e.kind+' '+e.pid)];
@@ -593,7 +616,7 @@ const rateBar=pct=>`<div class="meter"><i style="width:${Math.max(0,Math.min(100
 // ---------- sortable tables: click a header to sort, again to reverse; remembered per browser ----------
 const SORT=(()=>{try{return JSON.parse(localStorage.getItem('sort'))||{}}catch(e){return {}}})();
 function sortBy(t,k){const c=SORT[t];SORT[t]=c&&c.k===k?{k,d:-c.d}:{k,d:1};try{localStorage.setItem('sort',JSON.stringify(SORT))}catch(e){}
-  if(t==='sc'||t==='dc') showFound(t,found[t]); else render()}
+  if(PK[t]) pkRender(t); else render()}
 function th(t,k,label,cls='',style=''){
   const c=SORT[t],on=c&&c.k===k;
   return `<th class="sortable ${cls} ${on?'on':''}" style="${style}" onclick="sortBy('${t}','${k}')" aria-sort="${on?(c.d>0?'ascending':'descending'):'none'}" title="Sort by ${label}">${label}<span class="arr">${on?(c.d>0?'▲':'▼'):'↕'}</span></th>`;
@@ -668,21 +691,41 @@ function render(){
   const cb=$('#inbar input');if(cb)cb.indeterminate=nSel>0&&nSel<list.length;
   $('#inlist').innerHTML=list.map(i=>{
     const st=stateOf(i),n=S.outputs.filter(o=>o.input_id===i.id).length;
-    return `<div class="initem ${i.id===sel&&!g&&view!=='progs'?'sel':''} ${inSel.has(i.id)?'picked':''}" onclick="pick(${i.id})">
+    return `<div class="initem ${i.id===sel&&!g&&view==='home'?'sel':''} ${inSel.has(i.id)?'picked':''}" onclick="pick(${i.id})">
       <span class="lead"><input type="checkbox" ${inSel.has(i.id)?'checked':''} onclick="event.stopPropagation()" onchange="inSelOne(${i.id},this.checked)" aria-label="Select ${esc(i.name)}"><span class="dot ${st}" title="${stateTxt[st]||st}${i.status?.down_since?' · down '+dur(Date.now()/1000-i.status.down_since)+', auto-reconnecting':''}"></span></span><span class="nm">${esc(i.name)}</span>
       <span class="rate">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'off'}</span>
       <span></span><span class="u muted mono">${esc(i.url)} · ${n} out</span>
       ${i.enabled?`<span></span>${spark('side'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps')}`:''}</div>`}).join('')||emptyState('inbox',S.inputs.length?'No match':'No inputs yet');
-  const nProgs=S.inputs.reduce((n,i)=>n+(i.enabled?(i.status?.services||[]).length:0),0);
-  $('#nav-progs-n').textContent=nProgs;
-  $('#nav-home').classList.toggle('on',!g&&view==='home'&&sel===null);$('#nav-progs').classList.toggle('on',!g&&view==='progs');
-  $('#main').innerHTML=g?searchView(g):view==='progs'?programsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
+  const nProgs=S.inputs.reduce((n,i)=>n+(i.enabled?svcsOf(i).length:0),0);
+  $('#nav-progs-n').textContent=nProgs;$('#nav-inputs-n').textContent=S.inputs.length;$('#nav-outputs-n').textContent=S.outputs.length;
+  $('#nav-home').classList.toggle('on',!g&&view==='home'&&sel===null);
+  ['progs','inputs','outputs'].forEach(v=>$('#nav-'+v).classList.toggle('on',!g&&view===v));
+  $('#main').innerHTML=g?searchView(g):view==='progs'?programsView():view==='inputs'?inputsView():view==='outputs'?outputsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
+  syncHash();
   if(fid&&ae!==document.activeElement){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(fs,fe)}catch(e){}}}
   if(hov){const el=document.querySelector(`.spark[data-k="${hov.k}"]`);if(el)sparkAt(el,hov.x);else{hov=null;$('#tip').style.display='none'}}
 }
-function pick(id){view='home';if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';render();window.scrollTo({top:0})}
-function goProgs(){view='progs';sel=null;checked.clear();$('#gq').value='';render();window.scrollTo({top:0})}
-function goHome(){view='home';sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';render();window.scrollTo({top:0})}
+function pick(id){view='home';if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
+function goView(v){view=v;sel=null;checked.clear();$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
+function goProgs(){goView('progs')}
+function goHome(){view='home';sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';navPush=true;render();window.scrollTo({top:0})}
+// ---------- routes: #/  #/inputs  #/programs  #/outputs  #/input/<id>  #/search/<text>  (survive a browser refresh) ----------
+let navPush=false;
+function wantHash(){const g=$('#gq').value.trim();return g?'#/search/'+encodeURIComponent(g):view==='progs'?'#/programs':view==='inputs'?'#/inputs':view==='outputs'?'#/outputs':sel!==null?'#/input/'+sel:'#/'}
+function syncHash(){
+  const h=wantHash(),cur=location.hash||'#/',push=navPush;navPush=false;
+  if(h!==cur) history[push?'pushState':'replaceState'](null,'',h);
+}
+function applyRoute(){
+  const [p,a='']=(location.hash||'#/').replace(/^#\/?/,'').split('/');let g='';
+  view='home';sel=null;checked.clear();
+  if(p==='programs') view='progs';
+  else if(p==='inputs'||p==='outputs') view=p;
+  else if(p==='input'&&/^\d+$/.test(a)) sel=+a;
+  else if(p==='search'){try{g=decodeURIComponent(a)}catch(e){g=a}}
+  $('#gq').value=g;
+}
+window.addEventListener('popstate',()=>{applyRoute();if($('#app').style.display!=='none'){render();window.scrollTo({top:0})}});
 function tsearch(key,ph){return `<div class="field-ic tsearch">${icon('search')}<input type="text" id="ts-${key}" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;render()"></div>`}
 
 function outCard(title,list,showInput){
@@ -715,7 +758,7 @@ function outRows(list,showInput){
     <td class="num mono"><div class="ratecell">${o.enabled?mbps(k)+' Mbps':'—'}${rateBar(k/maxK*100)}</div></td><td>${badge}</td>
     <td style="text-align:right;white-space:nowrap"><button class="ibtn sm" title="Edit" onclick="openOut(${o.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delOut(${o.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>';
 }
-function kpi(ic,label,val,unit,extra=''){return `<div class="tile"><div class="lbl">${icon(ic)}${label}</div><div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${extra}</div>`}
+function kpi(ic,label,val,unit,extra='',href=''){return `<${href?`a href="${href}"`:'div'} class="tile"><div class="lbl">${icon(ic)}${label}</div><div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${extra}</${href?'a':'div'}>`}
 function overview(){
   const head=`<div class="page-hd"><div><h1>Dashboard</h1><p>Live overview · updates every 2 seconds</p></div><span class="sp"></span><button class="btn primary" onclick="openInput()">${icon('plus')}Add input</button></div>`;
   if(!S.inputs.length) return head+`<div class="card">${emptyState('radar','No inputs yet','<div style="margin-bottom:16px">Add an MPTS source. Discover finds every stream on an interface automatically.</div><button class="btn primary" onclick="openInput()">'+icon('plus')+'Add input</button>')}</div>`;
@@ -724,26 +767,42 @@ function overview(){
   const inR=H.in.at(-1)?.v||0,outR=H.out.at(-1)?.v||0,memP=y.mem_total?y.mem_used/y.mem_total*100:0;
   const dotLbl=(cls,n,l)=>n?`<span><i class="dot ${cls}"></i>${n} ${l}</span>`:'';
   const tiles=
-    kpi('in','Inputs receiving',c.ok,`/ ${S.inputs.length}`,`<div class="sub">${dotLbl('nosignal',c.nosignal,'no signal')}${dotLbl('error',c.error,'error')}${dotLbl('off',c.off,'disabled')}${c.ok===S.inputs.length?'<span>'+icon('check')+' all healthy</span>':''}</div>`)+
-    kpi('out','Outputs active',act,`/ ${S.outputs.length}`,`<div class="sub"><span>${en.length} enabled</span>${S.outputs.length-en.length?`<span>${S.outputs.length-en.length} disabled</span>`:''}</div>`)+
+    kpi('in','Inputs receiving',c.ok,`/ ${S.inputs.length}`,`<div class="sub">${dotLbl('nosignal',c.nosignal,'no signal')}${dotLbl('error',c.error,'error')}${dotLbl('off',c.off,'disabled')}${c.ok===S.inputs.length?'<span>'+icon('check')+' all healthy</span>':''}</div>`,'#/inputs')+
+    kpi('out','Outputs active',act,`/ ${S.outputs.length}`,`<div class="sub"><span>${en.length} enabled</span>${S.outputs.length-en.length?`<span>${S.outputs.length-en.length} disabled</span>`:''}</div>`,'#/outputs')+
     kpi('activity','Input bitrate',mbps(inR),'Mbps',spark('k-in',H.in,v=>mbps(v)+' Mbps in'))+
     kpi('activity','Output bitrate',mbps(outR),'Mbps',spark('k-out',H.out,v=>mbps(v)+' Mbps out'))+
     kpi('cpu','Host CPU',(y.cpu??0).toFixed(0),'%',spark('k-cpu',H.cpu,v=>v.toFixed(1)+'% CPU')+`<div class="sub"><span>${y.cores||'–'} cores</span><span>app ${(y.app_cpu??0).toFixed(1)}% of a core</span></div>`)+
     kpi('mem','Memory',gb(y.mem_used||0).split(' ')[0],gb(y.mem_used||0).split(' ')[1]+' / '+gb(y.mem_total||0),meterHTML(memP)+`<div class="sub"><span>${memP.toFixed(0)}% used</span><span>app ${gb(y.app_rss||0)}</span></div>`);
-  const grid=S.inputs.map(i=>{const st=stateOf(i),s=i.status||{},n=S.outputs.filter(o=>o.input_id===i.id).length;
+  return head+`<div class="kpis">${tiles}</div>`;
+}
+// ---------- all inputs: status tiles with kept channels ----------
+function inputsView(){
+  const head=`<div class="page-hd"><div><h1>All inputs</h1><p>Status and kept channels of every input</p></div><span class="sp"></span><button class="btn primary" onclick="openInput()">${icon('plus')}Add input</button></div>`;
+  if(!S.inputs.length) return head+`<div class="card">${emptyState('radar','No inputs yet','<div style="margin-bottom:16px">Add an MPTS source. Discover finds every stream on an interface automatically.</div><button class="btn primary" onclick="openInput()">'+icon('plus')+'Add input</button>')}</div>`;
+  const list=S.inputs.filter(i=>!q.inl||match(q.inl,i.name,i.url,stateTxt[stateOf(i)],...svcsOf(i).map(x=>x.name)));
+  const grid=list.map(i=>{const st=stateOf(i),s=i.status||{},n=S.outputs.filter(o=>o.input_id===i.id).length;
+    // kept channels by name; a green mark means the channel has an active output
+    let chs=svcsOf(i).map(x=>({sid:x.sid,name:x.name||'SID '+x.sid}));
+    if(!chs.length&&i.services?.length) chs=i.services.map(sid=>({sid,name:'SID '+sid}));
+    const on=sid=>S.outputs.some(o=>o.input_id===i.id&&o.src_sid===sid&&o.enabled&&o.status?.active);
+    const chHTML=chs.slice(0,8).map(c=>`<span class="chip ch ${on(c.sid)?'on':''}" title="SID ${c.sid}${on(c.sid)?' · output active':''}"><i></i>${esc(c.name)}</span>`).join('')+(chs.length>8?`<span class="chip">+${chs.length-8} more</span>`:'');
+    const kept=i.services?.length?`<b>${chs.length}</b> of ${(s.services||[]).length||'?'} channels kept`:`<b>${chs.length}</b> channels`;
     return `<div class="intile" onclick="if(!event.target.closest('.spark'))pick(${i.id})"><div class="t"><span class="dot ${st}"></span><b>${esc(i.name)}</b>${statePill(st)}</div>
       <div class="u mono muted">${esc(i.url)}</div>${watchLine(i)}
       ${i.enabled?spark('g'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):'<div class="spark" style="height:34px"></div>'}
-      <div class="f"><span><b>${(s.services||[]).length}</b> programs · <b>${n}</b> outputs</span><span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> Mbps</span></div></div>`}).join('');
-  return head+`<div class="kpis">${tiles}</div>
-    <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${S.inputs.length}</span><span class="sp"></span>${delInsBtn(S.inputs)}</div><div class="ingrid">${grid}</div></div>
-    ${outCard('All outputs',S.outputs,true)}`;
+      ${chHTML?`<div class="chs">${chHTML}</div>`:''}
+      <div class="f"><span>${kept} · <b>${n}</b> outputs</span><span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> Mbps</span></div></div>`}).join('');
+  return head+`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${list.length}</span><span class="sp"></span>${tsearch('inl','Search inputs…')}${delInsBtn(list,q.inl)}</div>${grid?`<div class="ingrid">${grid}</div>`:emptyState('search','No matching inputs')}</div>`;
+}
+function outputsView(){
+  return `<div class="page-hd"><div><h1>All outputs</h1><p>${S.outputs.length} output${S.outputs.length===1?'':'s'} from every input</p></div><span class="sp"></span><button class="btn" onclick="goProgs()">${icon('plus')}Create from programs</button></div>
+    ${outCard('Outputs',S.outputs,true)}`;
 }
 function searchView(g){
   const ins=S.inputs.filter(i=>match(g,i.name,i.url,stateTxt[stateOf(i)]));
-  const svcs=[];S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
+  const svcs=[];S.inputs.forEach(i=>svcsOf(i).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
   const outs=S.outputs.filter(o=>match(g,...outText(o)));
-  const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>(i.status?.services||[]).length}).map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${(i.status?.services||[]).length}</td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching inputs');
+  const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>svcsOf(i).length}).map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${esc(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${svcsOf(i).length}</td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching inputs');
   const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}).map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid},${i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching programs');
   return `<div class="page-hd"><div><h1>Search results</h1><p>“${esc(g)}” · ${ins.length} inputs · ${svcs.length} programs · ${outs.length} outputs</p></div><span class="sp"></span><button class="btn" onclick="$('#gq').value='';render()">${icon('x')}Clear search</button></div>
     <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span><span class="sp"></span>${delInsBtn(ins,g)}</div>${inT}</div>
@@ -753,13 +812,14 @@ function searchView(g){
 const streamChips=x=>x.streams.map(e=>`<span class="chip ${e.kind}" title="stream type 0x${e.type.toString(16)}"><i></i>${e.kind} ${e.pid}</span>`).join('');
 function inputView(i){
   const st=stateOf(i),s=i.status||{},outs=S.outputs.filter(o=>o.input_id===i.id);
-  const all=s.services||[],svcs=all.filter(x=>!q.svc||match(q.svc,...svcText(x)));
+  const all=svcsOf(i),total=(s.services||[]).length,svcs=all.filter(x=>!q.svc||match(q.svc,...svcText(x)));
   const used={};outs.forEach(o=>used[o.src_sid]=(used[o.src_sid]||0)+1);
   for(const c of [...checked]) if(!all.find(x=>x.sid===c)) checked.delete(c);
   const allChk=svcs.length&&svcs.every(x=>checked.has(x.sid));
   const maxK=Math.max(1,...all.map(x=>x.kbps));
   let svcTable;
   if(!i.enabled) svcTable=emptyState('pause','Input is disabled','Turn it on to read its programs.');
+  else if(!all.length&&total) svcTable=emptyState('tv','None of the kept channels are in the stream now',`<div style="margin-bottom:14px">The stream carries ${total} other channel${total>1?'s':''}.</div><button class="btn primary sm" onclick="openInput(${i.id})">${icon('tv')}Choose channels</button>`);
   else if(!all.length) svcTable=st==='error'?emptyState('xcirc','Cannot open input',esc(s.error)):emptyState('clock','Waiting for programs…','Reading PAT, PMT and SDT from the stream.');
   else if(!svcs.length) svcTable=emptyState('search','No matching programs');
   else svcTable=`<div class="tablewrap"><table><thead><tr><th style="width:40px"><input type="checkbox" ${allChk?'checked':''} onchange="chkAll(this.checked)" aria-label="Select all"></th>${th('svc','sid','SID')}${th('svc','name','Program')}${th('svc','type','Type')}${th('svc','streams','Streams')}${th('svc','rate','Bitrate','num')}${th('svc','outs','Outputs')}<th></th></tr></thead><tbody>`+
@@ -785,11 +845,11 @@ function inputView(i){
           <button class="btn sm" onclick="openInput(${i.id})">${icon('edit')}Edit</button><button class="btn sm danger" onclick="delIn(${i.id})">${icon('trash')}Delete</button></div></div>
       <div class="hero-kpis">
         <div><span>Bitrate</span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> <span style="display:inline">Mbps</span>${i.enabled?spark('h'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):''}</div>
-        <div><span>Programs</span><b>${all.length}</b></div>
+        <div><span>Programs</span><b>${all.length}</b>${i.services?.length&&total?` <span style="display:inline">/ ${total}</span>`:''}</div>
         <div><span>Outputs active</span><b>${act}</b> <span style="display:inline">/ ${outs.length}</span></div>
         <div><span>TS ID</span><b class="mono" style="font-size:17px">${s.tsid||'—'}</b></div>
         <div><span>Network ID</span><b class="mono" style="font-size:17px">${s.onid||'—'}</b></div></div></div>
-    <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${all.length}</span><span class="sp"></span>${all.length?tsearch('svc','Search programs…'):''}</div>${svcTable}</div>
+    <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${all.length}</span>${i.services?.length&&total?`<span class="muted" style="font-size:12.5px">${all.length} of ${total} channels kept</span>`:''}<span class="sp"></span>${all.length?tsearch('svc','Search programs…'):''}${total?`<button class="btn sm" onclick="openInput(${i.id})">${icon('tv')}Channels</button>`:''}</div>${svcTable}</div>
     ${outCard('Outputs',outs,false)}`;
 }
 // ---------- program preview (ffmpeg LL-HLS on the server, hls.js here) ----------
@@ -833,17 +893,17 @@ window.addEventListener('pagehide',closePreview);
 // ---------- all programs (every input) ----------
 function apRows(){
   const rows=[];
-  S.inputs.forEach(i=>{if(!i.enabled)return;(i.status?.services||[]).forEach(x=>rows.push({i,x,k:i.id+':'+x.sid,used:S.outputs.filter(o=>o.input_id===i.id&&o.src_sid===x.sid).length}))});
+  S.inputs.forEach(i=>{if(!i.enabled)return;svcsOf(i).forEach(x=>rows.push({i,x,k:i.id+':'+x.sid,used:S.outputs.filter(o=>o.input_id===i.id&&o.src_sid===x.sid).length}))});
   for(const k of [...apSel]) if(!rows.find(r=>r.k===k)) apSel.delete(k);
   return rows;
 }
 function apVisible(rows){return rows.filter(r=>(!apIn||r.i.id===+apIn)&&(!apFree||!r.used)&&(!q.ap||match(q.ap,...svcText(r.x),r.i.name,r.i.url)))}
 function programsView(){
   const rows=apRows(),vis=apVisible(rows),maxK=Math.max(1,...vis.map(r=>r.x.kbps));
-  const live=S.inputs.filter(i=>i.enabled&&(i.status?.services||[]).length).length;
-  const waiting=S.inputs.filter(i=>i.enabled&&!(i.status?.services||[]).length).length,off=S.inputs.filter(i=>!i.enabled).length;
+  const live=S.inputs.filter(i=>i.enabled&&svcsOf(i).length).length;
+  const waiting=S.inputs.filter(i=>i.enabled&&!svcsOf(i).length).length,off=S.inputs.filter(i=>!i.enabled).length;
   const nVisSel=vis.filter(r=>apSel.has(r.k)).length,allChk=vis.length&&nVisSel===vis.length;
-  const inOpts=S.inputs.filter(i=>i.enabled&&(i.status?.services||[]).length).map(i=>`<option value="${i.id}" ${+apIn===i.id?'selected':''}>${esc(i.name)} (${i.status.services.length})</option>`).join('');
+  const inOpts=S.inputs.filter(i=>i.enabled&&svcsOf(i).length).map(i=>`<option value="${i.id}" ${+apIn===i.id?'selected':''}>${esc(i.name)} (${svcsOf(i).length})</option>`).join('');
   let table;
   if(!rows.length) table=emptyState('clock',S.inputs.length?'No programs yet':'No inputs yet',S.inputs.length?'Programs appear here once enabled inputs are receiving and their PAT/PMT/SDT have been read.':'Add an input first.');
   else if(!vis.length) table=emptyState('search','No matching programs');
@@ -860,7 +920,7 @@ function programsView(){
       <select id="ap-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
       <select id="ap-if" onchange="bk.la=this.value">${ifOpts(bk.la??S.settings.auto_localaddr)}</select>
       <button class="btn primary sm" ${apSel.size?'':'disabled'} onclick="apCreate()">${icon('plus')}Create ${apSel.size||''} output${apSel.size===1?'':'s'}</button></div>`;
-  const notes=[waiting&&`${waiting} enabled input${waiting>1?'s':''} still waiting for programs`,off&&`${off} disabled input${off>1?'s':''} not shown`].filter(Boolean).join(' · ');
+  const notes=[waiting&&`${waiting} enabled input${waiting>1?'s':''} without kept programs yet`,off&&`${off} disabled input${off>1?'s':''} not shown`].filter(Boolean).join(' · ');
   setTimeout(()=>{const a=$('#ap-all');if(a)a.indeterminate=nVisSel>0&&nVisSel<vis.length});
   return `<div class="page-hd"><div><h1>All programs</h1><p>${rows.length} programs from ${live} input${live===1?'':'s'}${notes?' · '+notes:''}</p></div></div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${vis.length}</span><span class="sp"></span>
@@ -915,7 +975,7 @@ async function control(a){
   refresh();
 }
 function chk(sid,on){on?checked.add(sid):checked.delete(sid);render()}
-function chkAll(on){const i=S.inputs.find(x=>x.id===sel);(i.status?.services||[]).filter(x=>!q.svc||match(q.svc,...svcText(x))).forEach(x=>on?checked.add(x.sid):checked.delete(x.sid));render()}
+function chkAll(on){const i=S.inputs.find(x=>x.id===sel);svcsOf(i).filter(x=>!q.svc||match(q.svc,...svcText(x))).forEach(x=>on?checked.add(x.sid):checked.delete(x.sid));render()}
 function copy(t){navigator.clipboard?.writeText(t).then(()=>toast('Copied to clipboard'),()=>toast('Copy failed','err'))}
 
 async function bulkCreate(){
@@ -938,7 +998,8 @@ document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('mousedown'
 
 let miMode='disc';
 function miTab(t){miMode=t;document.querySelectorAll('#mi-tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));
-  ['disc','iface','manual','scan'].forEach(x=>$('#mi-'+x).style.display=x===t?'':'none');$('#mi-save').style.display=t==='scan'||t==='disc'?'none':''}
+  ['disc','iface','manual','scan'].forEach(x=>$('#mi-'+x).style.display=x===t?'':'none');
+  const b=$('#mi-save');b.style.display='';b.disabled=false;b.textContent='Save';pkSaveBtn()}
 // expandGroups turns "239.2.2.1-20:5000, 239.3.3.3" into ["239.2.2.1:5000", …, "239.3.3.3:1234"]
 const ip2n=s=>{const p=s.split('.').map(Number);if(p.length!==4||p.some(x=>!Number.isInteger(x)||x<0||x>255))throw new Error('bad address: '+s);return((p[0]<<24)>>>0)+(p[1]<<16)+(p[2]<<8)+p[3]};
 const n2ip=n=>[n>>>24,(n>>16)&255,(n>>8)&255,n&255].join('.');
@@ -971,34 +1032,119 @@ function openInput(id){
   $('#mi-name').value=i?.name||'';$('#mi-url').value=i?.url||'';
   $('#mi-if').innerHTML=ifOpts('');$('#sc-if').innerHTML=ifOpts('');$('#dc-if').innerHTML=ifOpts('').replace('Any (default route)','All interfaces');$('#dc-res').innerHTML='';$('#dc-msg').textContent='';
   $('#mi-group').value='';$('#mi-src').value='';$('#sc-res').innerHTML='';$('#sc-msg').textContent='';
+  delete PK.dc;delete PK.sc;delete PK.ed;$('#ed-res').innerHTML='';
+  const svs=i?.status?.services||[];
+  $('#mi-ch').style.display=i&&svs.length?'':'none';
+  if(i&&svs.length){
+    // kept channels that are not in the stream right now stay listed, so saving does not drop them
+    const have=new Set(svs.map(x=>x.sid)),gone=(i.services||[]).filter(sid=>!have.has(sid)).map(sid=>({sid,name:`Service ${sid} (not in the stream now)`,provider:'',type:0,streams:[],kbps:0}));
+    const rows=[...svs,...gone].map(x=>({key:String(x.sid),url:i.url,x:{...x,streams:x.streams||[]}}));
+    pkOpen('ed',rows,i.services?.length?i.services.map(String):rows.map(r=>r.key),true);
+  }
   $('#mi-tabs').style.display=i?'none':'';miTab(i?'manual':'disc');miBuild();$('#mi-err').textContent='';openM('m-input');
 }
 async function saveInput(){
   const cur=S.inputs.find(x=>x.id===editIn);
+  if(miMode==='disc'||miMode==='scan') return addPicked(miMode==='disc'?'dc':'sc');
   if(miMode==='iface'){
     const urls=miBuild();
     if(!urls.length){$('#mi-err').textContent||($('#mi-err').textContent='Enter at least one group');return}
     return addBulk(urls,true);
   }
-  const url=$('#mi-url').value.trim();
+  const url=$('#mi-url').value.trim(),body={name:$('#mi-name').value,url,enabled:cur?cur.enabled:true};
+  if(editIn&&PK.ed?.rows.length){
+    const keep=pkChosen('ed').map(r=>+r.key);
+    if(!keep.length){$('#mi-err').textContent='Tick at least one channel to keep';return}
+    body.services=keep.length===PK.ed.rows.length?[]:keep;
+  }
   try{
-    const r=await api(editIn?'PUT':'POST',editIn?`api/inputs/${editIn}`:'api/inputs',{name:$('#mi-name').value,url,enabled:cur?cur.enabled:true});
+    const r=await api(editIn?'PUT':'POST',editIn?`api/inputs/${editIn}`:'api/inputs',body);
     closeM('m-input');sel=r.id;await refresh();toast('Input saved');
   }catch(e){$('#mi-err').textContent=e.message}
 }
-// found[] holds the latest scan/discover results per pane, for "Add all"
-const found={sc:[],dc:[]};
+// ---------- channel picker: Discover / Scan results, and the channels kept on an input ----------
+let skipAudio=(()=>{try{return localStorage.getItem('skipAudio')!=='0'}catch(e){return true}})();
+const PK={};   // pane key (dc, sc, ed) -> {rows, sel:Set of row keys, q, edit}
 function showFound(k,r){
-  found[k]=r;
-  const have=new Set(S.inputs.map(i=>i.url)),fresh=r.filter(x=>!have.has(x.url)).length;
-  $('#'+k+'-msg').innerHTML=`<b style="color:var(--text)">${r.length}</b> stream${r.length===1?'':'s'} found`+(fresh?` <button class="btn sm primary" onclick="addAllFound('${k}')">${icon('plus')}Add all ${fresh}</button>`:'');
-  r=sorted(k,r,{url:x=>x.url,src:x=>x.source||'',rate:x=>x.kbps,progs:x=>(x.services||[]).length});
-  $('#'+k+'-res').innerHTML=r.length?`<table><thead><tr>${th(k,'url','URL')}${k==='dc'?th(k,'src','Sender'):''}${th(k,'rate','Bitrate','num')}${th(k,'progs','Programs','num')}<th></th></tr></thead><tbody>`+r.map(x=>`<tr><td class="mono">${esc(x.url)}</td>${k==='dc'?`<td class="mono">${esc(x.source||'')}</td>`:''}<td class="num mono">${mbps(x.kbps)} Mbps</td>
-    <td class="num" title="${esc((x.services||[]).map(s=>s.name||s.sid).join(', '))}">${(x.services||[]).length}</td>
-    <td style="text-align:right">${have.has(x.url)?`<span class="pill ok">${icon('check')}Added</span>`:`<button class="btn sm primary f-add" onclick="addScanned(this,'${esc(x.url)}')">Add</button>`}</td></tr>`).join('')+'</tbody></table>':'';
+  const n=r.reduce((a,f)=>a+(f.services||[]).length,0);
+  $('#'+k+'-msg').innerHTML=`<b style="color:var(--text)">${r.length}</b> stream${r.length===1?'':'s'} · <b style="color:var(--text)">${n}</b> channel${n===1?'':'s'} found`;
+  const rows=[];
+  r.forEach(f=>{const sv=f.services||[],base={url:f.url,src:f.source||'',skbps:f.kbps};
+    if(!sv.length) rows.push({...base,key:f.url+'#*',x:null});
+    sv.forEach(x=>rows.push({...base,key:f.url+'#'+x.sid,x:{...x,streams:x.streams||[]}}))});
+  pkOpen(k,rows,[],false);
+}
+// already added: the input exists and keeps this channel (or keeps everything)
+function pkAdded(r){const i=S.inputs.find(i=>i.url===r.url);return !!i&&(!r.x||!i.services?.length||i.services.includes(r.x.sid))}
+const pkSkipped=r=>skipAudio&&isAudioOnly(r.x);
+function pkVisible(k){const p=PK[k];return p.rows.filter(r=>!pkSkipped(r)&&(!p.q||match(p.q,...(r.x?svcText(r.x):[]),r.url,r.src||'')))}
+const pkPickable=(p,r)=>p.edit||!pkAdded(r);
+// what Add/Save uses: ticked rows, minus audio-only ones while that filter is on
+function pkChosen(k){const p=PK[k];return p?p.rows.filter(r=>p.sel.has(r.key)&&!pkSkipped(r)&&pkPickable(p,r)):[]}
+function pkOpen(k,rows,sel,edit){
+  PK[k]={rows,sel:new Set(sel),q:'',edit};
+  $('#'+k+'-res').innerHTML=rows.length?`<div class="pk-bar">
+      <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" id="${k}-all" onchange="pkAll('${k}',this.checked)">Select all shown</label>
+      <span class="text2" id="${k}-cnt"></span><span class="sp"></span>
+      <label class="row" style="gap:7px;color:var(--text2)" title="Hide radio / audio-only channels and never add them">Skip audio-only<span class="switch"><input type="checkbox" class="pk-skip" ${skipAudio?'checked':''} onchange="setSkipAudio(this.checked)"><span></span></span></label>
+      <div class="field-ic tsearch">${icon('search')}<input type="text" placeholder="Search channels…" oninput="PK['${k}'].q=this.value;pkRender('${k}')" aria-label="Search channels"></div>
+    </div><div class="pk-tbl" id="${k}-tbl"></div>`:'';
+  pkRender(k);
+}
+function pkRender(k){
+  const p=PK[k];if(!p)return;
+  const vis=pkVisible(k),pick=vis.filter(r=>pkPickable(p,r)),nSel=pick.filter(r=>p.sel.has(r.key)).length;
+  const a=$('#'+k+'-all');if(a){a.checked=!!pick.length&&nSel===pick.length;a.indeterminate=nSel>0&&nSel<pick.length;a.disabled=!pick.length}
+  const hid=p.rows.length-vis.length,c=$('#'+k+'-cnt');
+  if(c)c.textContent=`${pkChosen(k).length} of ${p.rows.length} channel${p.rows.length===1?'':'s'} ${p.edit?'kept':'selected'}${hid?` · ${hid} hidden`:''}`;
+  const t=$('#'+k+'-tbl');
+  if(t){
+    const rows=sorted(k,vis,{name:r=>r.x?.name||'',sid:r=>r.x?.sid||0,type:r=>r.x?stype(r.x.type):'',url:r=>r.url,rate:r=>r.x?r.x.kbps:r.skbps});
+    t.innerHTML=rows.length?`<table><thead><tr><th style="width:40px"></th>${th(k,'name','Program')}${th(k,'sid','SID')}${th(k,'type','Type')}<th>Streams</th>${p.edit?'':th(k,'url','Source stream')}${th(k,'rate','Bitrate','num')}${p.edit?'':'<th></th>'}</tr></thead><tbody>`+rows.map(r=>{
+      const x=r.x,added=!p.edit&&pkAdded(r),key=esc(r.key);
+      return `<tr class="${added?'pk-added':''}" onclick="if(!event.target.closest('input,a,button'))pkFlip('${k}','${key}')">
+        <td><input type="checkbox" ${added||p.sel.has(r.key)?'checked':''} ${added?'disabled':''} onchange="pkOne('${k}','${key}',this.checked)" aria-label="Select ${esc(x?.name||r.url)}"></td>
+        <td class="pk-name">${x?`<b>${esc(x.name||'Service '+x.sid)}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}`:'<i class="muted">No program info read · whole stream</i>'}</td>
+        <td class="mono">${x?x.sid:'—'}</td>
+        <td>${x&&x.type?`<span class="chip">${stype(x.type)}</span>`:''}${isAudioOnly(x)?'<span class="chip audio"><i></i>audio only</span>':''}</td>
+        <td>${x?streamChips(x):''}</td>
+        ${p.edit?'':`<td class="mono" style="font-size:12px">${esc(r.url)}${r.src?`<div class="muted">from ${esc(r.src)}</div>`:''}</td>`}
+        <td class="num mono">${mbps(x?x.kbps:r.skbps)} Mbps</td>
+        ${p.edit?'':`<td>${added?`<span class="pill ok">${icon('check')}Added</span>`:''}</td>`}</tr>`}).join('')+'</tbody></table>'
+      :emptyState('search',p.q?'No matching channels':'Every channel here is audio-only',p.q?'':'Turn off <b style="display:inline;font-size:inherit">Skip audio-only</b> to see them.');
+  }
+  pkSaveBtn();
+}
+function pkOne(k,key,on){on?PK[k].sel.add(key):PK[k].sel.delete(key);pkRender(k)}
+function pkFlip(k,key){const p=PK[k],r=p.rows.find(r=>r.key===key);if(r&&pkPickable(p,r))pkOne(k,key,!p.sel.has(key))}
+function pkAll(k,on){const p=PK[k];pkVisible(k).filter(r=>pkPickable(p,r)).forEach(r=>on?p.sel.add(r.key):p.sel.delete(r.key));pkRender(k)}
+function setSkipAudio(on){
+  skipAudio=on;try{localStorage.setItem('skipAudio',on?'1':'0')}catch(e){}
+  document.querySelectorAll('.pk-skip').forEach(c=>c.checked=on);Object.keys(PK).forEach(pkRender);
+}
+function pkSaveBtn(){
+  if(miMode!=='disc'&&miMode!=='scan')return;
+  const k=miMode==='disc'?'dc':'sc',b=$('#mi-save'),ch=pkChosen(k),n=new Set(ch.map(r=>r.url)).size;
+  if(!PK[k]?.rows.length){b.style.display='none';return}
+  b.style.display='';b.disabled=!ch.length;
+  b.textContent=ch.length?`Add ${ch.length} channel${ch.length>1?'s':''} (${n} input${n>1?'s':''})`:'Tick channels to add';
+}
+// add the streams that carry the ticked channels, keeping only those channels
+async function addPicked(k){
+  const by=new Map();
+  pkChosen(k).forEach(r=>{if(!by.has(r.url))by.set(r.url,new Set());by.get(r.url).add(r.x?r.x.sid:'*')});
+  if(!by.size){$('#mi-err').textContent='Tick at least one channel';return}
+  const items=[...by].map(([url,s])=>({url,services:s.has('*')?[]:[...s]}));
+  const nCh=pkChosen(k).length;
+  try{
+    const r=await api('POST','api/inputs/bulk',{name:$('#mi-name').value,items});
+    closeM('m-input');goHome();await refresh();
+    const parts=[r.ids.length&&`${r.ids.length} new input${r.ids.length>1?'s':''}`,r.updated.length&&`${r.updated.length} input${r.updated.length>1?'s':''} updated`].filter(Boolean);
+    toast(`Kept ${nCh} channel${nCh>1?'s':''}${parts.length?' · '+parts.join(', '):''}`);
+  }catch(e){$('#mi-err').textContent=e.message}
 }
 async function runFind(k,path,body,busy){
-  const b=$('#'+k+'-go');b.disabled=true;$('#'+k+'-msg').innerHTML=`<span class="spin"></span> ${esc(busy)}`;$('#'+k+'-res').innerHTML='';$('#mi-err').textContent='';
+  const b=$('#'+k+'-go');b.disabled=true;$('#'+k+'-msg').innerHTML=`<span class="spin"></span> ${esc(busy)}`;$('#'+k+'-res').innerHTML='';$('#mi-err').textContent='';delete PK[k];pkSaveBtn();
   try{showFound(k,await api('POST',path,body))}catch(e){$('#'+k+'-msg').textContent='';$('#mi-err').textContent=e.message}
   b.disabled=false;
 }
@@ -1018,16 +1164,6 @@ async function addBulk(urls,close){
     toast(`Added ${r.ids.length} input${r.ids.length===1?'':'s'}${r.skipped.length?`, ${r.skipped.length} already existed`:''}`);
     return r;
   }catch(e){$('#mi-err').textContent=e.message}
-}
-const addedPill=()=>`<span class="pill ok">${icon('check')}Added</span>`;
-async function addAllFound(k){
-  const have=new Set(S.inputs.map(i=>i.url)),urls=found[k].map(x=>x.url).filter(u=>!have.has(u));
-  if(!urls.length)return;
-  if(await addBulk(urls,false)){document.querySelectorAll(`#${k}-res .f-add`).forEach(b=>b.outerHTML=addedPill());$('#'+k+'-msg').textContent=`${found[k].length} found · all added`}
-}
-async function addScanned(btn,url){
-  try{const r=await api('POST','api/inputs',{name:$('#mi-name').value||'',url,enabled:true});btn.outerHTML=addedPill();sel=r.id;refresh()}
-  catch(e){$('#mi-err').textContent=e.message}
 }
 async function toggleIn(id,on){const i=S.inputs.find(x=>x.id===id);await api('PUT',`api/inputs/${id}`,{...i,status:undefined,enabled:on}).catch(fail);refresh()}
 async function delIn(id){const i=S.inputs.find(x=>x.id===id),n=S.outputs.filter(o=>o.input_id===id).length;

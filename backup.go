@@ -66,8 +66,8 @@ func (s *Store) Replace(b Backup) error {
 		}
 	}
 	for _, in := range b.Inputs {
-		if _, err := tx.Exec(`INSERT INTO inputs(id,name,url,enabled) VALUES(?,?,?,?)`,
-			in.ID, in.Name, in.URL, in.Enabled); err != nil {
+		if _, err := tx.Exec(`INSERT INTO inputs(id,name,url,enabled,services) VALUES(?,?,?,?,?)`,
+			in.ID, in.Name, in.URL, in.Enabled, joinSIDs(in.Services)); err != nil {
 			return err
 		}
 	}
@@ -127,6 +127,7 @@ func (b *Backup) validate() error {
 		if in.Name = strings.TrimSpace(in.Name); in.Name == "" {
 			in.Name = su.Addr.String()
 		}
+		in.Services = normSIDs(in.Services)
 	}
 
 	outIDs, outURLs := map[int64]bool{}, map[string]bool{}

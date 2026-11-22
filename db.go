@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -20,7 +21,8 @@ CREATE TABLE IF NOT EXISTS inputs (
 	id      INTEGER PRIMARY KEY,
 	name    TEXT NOT NULL,
 	url     TEXT NOT NULL UNIQUE,
-	enabled INTEGER NOT NULL DEFAULT 1
+	enabled INTEGER NOT NULL DEFAULT 1,
+	services TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS outputs (
 	id           INTEGER PRIMARY KEY,
@@ -54,6 +56,43 @@ type Input struct {
 	Name    string `json:"name"`
 	URL     string `json:"url"`
 	Enabled bool   `json:"enabled"`
+	// Services lists the service IDs (channels) the user chose to keep from
+	// this input. Empty means every service.
+	Services []int `json:"services"`
+}
+
+// joinSIDs and splitSIDs store a channel selection as "101,102,205".
+func joinSIDs(s []int) string {
+	s = normSIDs(s)
+	p := make([]string, len(s))
+	for i, v := range s {
+		p[i] = strconv.Itoa(v)
+	}
+	return strings.Join(p, ",")
+}
+
+func splitSIDs(v string) []int {
+	out := []int{}
+	for _, f := range strings.Split(v, ",") {
+		if n, err := strconv.Atoi(strings.TrimSpace(f)); err == nil {
+			out = append(out, n)
+		}
+	}
+	return normSIDs(out)
+}
+
+// normSIDs sorts, dedupes and drops out-of-range service IDs.
+func normSIDs(s []int) []int {
+	out := []int{}
+	seen := map[int]bool{}
+	for _, v := range s {
+		if v >= 1 && v <= 65535 && !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	sort.Ints(out)
+	return out
 }
 
 type Output struct {
@@ -78,6 +117,14 @@ func OpenStore(path string) (*Store, error) {
 	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(schema); err != nil {
 		return nil, err
+	}
+	// databases created before the channel selection existed
+	var n int
+	db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('inputs') WHERE name='services'`).Scan(&n)
+	if n == 0 {
+		if _, err := db.Exec(`ALTER TABLE inputs ADD COLUMN services TEXT NOT NULL DEFAULT ''`); err != nil {
+			return nil, err
+		}
 	}
 	for k, v := range defaultSettings {
 		db.Exec(`INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)`, k, v)
@@ -112,7 +159,7 @@ func (s *Store) SetSetting(k, v string) error {
 }
 
 func (s *Store) Inputs() ([]Input, error) {
-	rows, err := s.db.Query(`SELECT id, name, url, enabled FROM inputs ORDER BY id`)
+	rows, err := s.db.Query(`SELECT id, name, url, enabled, services FROM inputs ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +167,11 @@ func (s *Store) Inputs() ([]Input, error) {
 	var out []Input
 	for rows.Next() {
 		var in Input
-		if err := rows.Scan(&in.ID, &in.Name, &in.URL, &in.Enabled); err != nil {
+		var svc string
+		if err := rows.Scan(&in.ID, &in.Name, &in.URL, &in.Enabled, &svc); err != nil {
 			return nil, err
 		}
+		in.Services = splitSIDs(svc)
 		out = append(out, in)
 	}
 	return out, rows.Err()
@@ -130,45 +179,66 @@ func (s *Store) Inputs() ([]Input, error) {
 
 func (s *Store) Input(id int64) (Input, error) {
 	var in Input
-	err := s.db.QueryRow(`SELECT id, name, url, enabled FROM inputs WHERE id=?`, id).
-		Scan(&in.ID, &in.Name, &in.URL, &in.Enabled)
+	var svc string
+	err := s.db.QueryRow(`SELECT id, name, url, enabled, services FROM inputs WHERE id=?`, id).
+		Scan(&in.ID, &in.Name, &in.URL, &in.Enabled, &svc)
+	in.Services = splitSIDs(svc)
 	return in, err
 }
 
 func (s *Store) SaveInput(in *Input) error {
 	if in.ID == 0 {
-		r, err := s.db.Exec(`INSERT INTO inputs(name,url,enabled) VALUES(?,?,?)`, in.Name, in.URL, in.Enabled)
+		r, err := s.db.Exec(`INSERT INTO inputs(name,url,enabled,services) VALUES(?,?,?,?)`, in.Name, in.URL, in.Enabled, joinSIDs(in.Services))
 		if err != nil {
 			return uniqueErr(err, "an input with this URL already exists")
 		}
 		in.ID, _ = r.LastInsertId()
 		return nil
 	}
-	_, err := s.db.Exec(`UPDATE inputs SET name=?, url=?, enabled=? WHERE id=?`, in.Name, in.URL, in.Enabled, in.ID)
+	_, err := s.db.Exec(`UPDATE inputs SET name=?, url=?, enabled=?, services=? WHERE id=?`, in.Name, in.URL, in.Enabled, joinSIDs(in.Services), in.ID)
 	return uniqueErr(err, "an input with this URL already exists")
 }
 
-// AddInputs inserts inputs in one transaction, skipping URLs that exist.
-func (s *Store) AddInputs(ins []Input) (ids []int64, skipped []string, err error) {
-	ids, skipped = []int64{}, []string{}
+// AddInputs inserts inputs in one transaction. A URL that already exists is
+// not duplicated: its channel selection is widened to include the new one
+// (an empty selection means every channel), and it is reported in updated
+// if that changed anything, in skipped otherwise.
+func (s *Store) AddInputs(ins []Input) (ids []int64, updated []int64, skipped []string, err error) {
+	ids, updated, skipped = []int64{}, []int64{}, []string{}
 	tx, err := s.db.Begin()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer tx.Rollback()
 	for _, in := range ins {
-		r, err := tx.Exec(`INSERT OR IGNORE INTO inputs(name,url,enabled) VALUES(?,?,?)`, in.Name, in.URL, in.Enabled)
-		if err != nil {
-			return nil, nil, err
-		}
-		if n, _ := r.RowsAffected(); n == 0 {
-			skipped = append(skipped, in.URL)
+		var id int64
+		var cur string
+		switch err := tx.QueryRow(`SELECT id, services FROM inputs WHERE url=?`, in.URL).Scan(&id, &cur); {
+		case err == nil:
+			merged := ""
+			if cur != "" && len(in.Services) > 0 {
+				merged = joinSIDs(append(splitSIDs(cur), in.Services...))
+			}
+			if merged == cur {
+				skipped = append(skipped, in.URL)
+				continue
+			}
+			if _, err := tx.Exec(`UPDATE inputs SET services=? WHERE id=?`, merged, id); err != nil {
+				return nil, nil, nil, err
+			}
+			updated = append(updated, id)
 			continue
+		case !errors.Is(err, sql.ErrNoRows):
+			return nil, nil, nil, err
 		}
-		id, _ := r.LastInsertId()
+		r, err := tx.Exec(`INSERT INTO inputs(name,url,enabled,services) VALUES(?,?,?,?)`, in.Name, in.URL, in.Enabled, joinSIDs(in.Services))
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		id, _ = r.LastInsertId()
 		ids = append(ids, id)
 	}
-	return ids, skipped, tx.Commit()
+	return ids, updated, skipped, tx.Commit()
 }
 
 func (s *Store) DeleteInput(id int64) error {

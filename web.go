@@ -321,9 +321,10 @@ func validSetting(k, v string) (bool, error) {
 
 func (a *App) saveInput(r *http.Request) (any, error) {
 	var req struct {
-		Name    string
-		URL     string
-		Enabled *bool
+		Name     string
+		URL      string
+		Enabled  *bool
+		Services *[]int // nil = keep (edit) / all (new)
 	}
 	if err := decode(r, &req); err != nil {
 		return nil, err
@@ -341,6 +342,15 @@ func (a *App) saveInput(r *http.Request) (any, error) {
 	in.ID = pathID(r)
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if req.Services != nil {
+		in.Services = normSIDs(*req.Services)
+	} else if in.ID != 0 {
+		cur, err := a.store.Input(in.ID)
+		if err != nil {
+			return nil, err
+		}
+		in.Services = cur.Services
+	}
 	if err := a.store.SaveInput(&in); err != nil {
 		return nil, err
 	}
@@ -348,27 +358,37 @@ func (a *App) saveInput(r *http.Request) (any, error) {
 }
 
 // addInputs creates many inputs at once (e.g. a group range on one
-// interface). URLs that already exist are skipped, not treated as errors.
+// interface, or channels picked from Discover). Each item may carry the
+// service IDs to keep; URLs that already exist get their selection widened
+// instead of failing.
 func (a *App) addInputs(r *http.Request) (any, error) {
+	type item struct {
+		URL      string `json:"url"`
+		Services []int  `json:"services"`
+	}
 	var req struct {
-		Name string   `json:"name"`
-		URLs []string `json:"urls"`
+		Name  string   `json:"name"`
+		URLs  []string `json:"urls"`
+		Items []item   `json:"items"`
 	}
 	if err := decode(r, &req); err != nil {
 		return nil, err
 	}
-	if len(req.URLs) == 0 || len(req.URLs) > 1024 {
+	for _, u := range req.URLs {
+		req.Items = append(req.Items, item{URL: u})
+	}
+	if len(req.Items) == 0 || len(req.Items) > 1024 {
 		return nil, errors.New("give 1..1024 URLs")
 	}
 	name := strings.TrimSpace(req.Name)
-	ins := make([]Input, 0, len(req.URLs))
-	for _, u := range req.URLs {
-		su, err := ParseStreamURL(u)
+	ins := make([]Input, 0, len(req.Items))
+	for _, it := range req.Items {
+		su, err := ParseStreamURL(it.URL)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", u, err)
+			return nil, fmt.Errorf("%s: %w", it.URL, err)
 		}
-		in := Input{URL: su.String(), Name: su.Addr.String(), Enabled: true}
-		if name != "" && len(req.URLs) == 1 {
+		in := Input{URL: su.String(), Name: su.Addr.String(), Enabled: true, Services: normSIDs(it.Services)}
+		if name != "" && len(req.Items) == 1 {
 			in.Name = name
 		} else if name != "" {
 			in.Name = name + " " + su.Addr.String()
@@ -377,11 +397,11 @@ func (a *App) addInputs(r *http.Request) (any, error) {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	ids, skipped, err := a.store.AddInputs(ins)
+	ids, updated, skipped, err := a.store.AddInputs(ins)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"ids": ids, "skipped": skipped}, a.Apply()
+	return map[string]any{"ids": ids, "updated": updated, "skipped": skipped}, a.Apply()
 }
 
 func (a *App) deleteInput(r *http.Request) (any, error) {
