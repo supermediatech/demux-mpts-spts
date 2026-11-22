@@ -249,7 +249,7 @@ func (a *App) state(r *http.Request) (any, error) {
 		}
 		ov = append(ov, v)
 	}
-	return map[string]any{"inputs": iv, "outputs": ov, "settings": settings, "system": a.sys.get()}, nil
+	return map[string]any{"inputs": iv, "outputs": ov, "settings": settings, "system": a.sys.get(), "version": version}, nil
 }
 
 func decode(r *http.Request, v any) error {

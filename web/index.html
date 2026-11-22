@@ -406,7 +406,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   </aside>
   <main id="main"></main>
 </div>
-<footer><span>© <span id="yr"></span> Super Media Tech. All rights reserved.</span><a href="https://www.supermediatech.com" target="_blank" rel="noopener">www.supermediatech.com</a></footer>
+<footer><span>© <span id="yr"></span> Super Media Tech. All rights reserved.<span id="ver" class="muted" style="margin-left:10px"></span></span><a href="https://www.supermediatech.com" target="_blank" rel="noopener">www.supermediatech.com</a></footer>
 </div>
 
 <!-- input modal -->
@@ -572,6 +572,7 @@ const HMAX=90,H={in:[],out:[],cpu:[],inp:{}};
 function pushH(arr,v){arr.push({t:Date.now(),v});if(arr.length>HMAX)arr.shift()}
 async function refresh(){
   S=await api('GET','api/state');
+  if(S.version) $('#ver').textContent='· MPTS → SPTS '+(/^\d/.test(S.version)?'v':'')+S.version;
   S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{x.streams||=[]}));
   let inR=0,outR=0;
   S.inputs.forEach(i=>{const k=i.enabled?i.status?.kbps||0:0;inR+=k;pushH(H.inp[i.id]??=[],k)});
@@ -742,7 +743,7 @@ function outRows(list,showInput){
   const maxK=Math.max(1,...list.map(o=>o.status?.kbps||0));
   const inName=o=>S.inputs.find(i=>i.id===o.input_id)?.name||'';
   list=sorted('out',list,{on:o=>o.enabled?0:1,name:o=>o.name,sid:o=>o.out_sid,input:inName,url:o=>o.url,rate:o=>o.enabled?o.status?.kbps||0:-1,status:outStatusRank});
-  return `<div class="tablewrap"><table><thead><tr>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:84px"></th></tr></thead><tbody>`+
+  return `<div class="tablewrap"><table><thead><tr>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:120px"></th></tr></thead><tbody>`+
   list.map(o=>{
     const s=o.status;let badge;
     if(!o.enabled) badge=`<span class="pill off">${icon('pause')}Disabled</span>`;
@@ -756,7 +757,7 @@ function outRows(list,showInput){
     ${showInput?`<td><a href="#" onclick="pick(${o.input_id});return false">${esc(inp?.name||'')}</a></td>`:''}
     <td class="mono"><span class="copy" title="Copy" onclick="copy('${esc(o.url)}')">${esc(o.url)}${icon('copy')}</span></td>
     <td class="num mono"><div class="ratecell">${o.enabled?mbps(k)+' Mbps':'—'}${rateBar(k/maxK*100)}</div></td><td>${badge}</td>
-    <td style="text-align:right;white-space:nowrap"><button class="ibtn sm" title="Edit" onclick="openOut(${o.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delOut(${o.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>';
+    <td style="text-align:right;white-space:nowrap">${playBtn(o.input_id,o.src_sid)}<button class="ibtn sm" title="Edit" onclick="openOut(${o.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delOut(${o.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>';
 }
 function kpi(ic,label,val,unit,extra='',href=''){return `<${href?`a href="${href}"`:'div'} class="tile"><div class="lbl">${icon(ic)}${label}</div><div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${extra}</${href?'a':'div'}>`}
 function overview(){
