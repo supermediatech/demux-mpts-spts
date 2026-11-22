@@ -299,6 +299,10 @@ func validSetting(k, v string) (bool, error) {
 		if _, err := strconv.Atoi(v); err != nil || parsePort(v, 0) == 0 {
 			return true, fmt.Errorf("invalid %s", k)
 		}
+	case "refresh_sec":
+		if n, err := strconv.Atoi(v); err != nil || n < 1 || n > 60 {
+			return true, errors.New("refresh interval must be 1..60 seconds")
+		}
 	case "auto_step":
 		if v != "ip" && v != "port" {
 			return true, errors.New("auto increment must be ip or port")

@@ -47,6 +47,7 @@ var defaultSettings = map[string]string{
 	"auto_proto":     "udp",
 	"auto_localaddr": "",
 	"ttl":            "16",
+	"refresh_sec":    "5", // web UI status refresh interval
 }
 
 type Store struct{ db *sql.DB }
