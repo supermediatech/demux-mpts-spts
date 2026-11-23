@@ -59,6 +59,36 @@ PASSWORD=change-me
 
 Flags: `-listen` (web address), `-db` (SQLite file), `-env` (credentials file), `-version`, `-pprof` (debug profiler address, off by default). To use Discover when running by hand, run `sudo setcap cap_net_raw,cap_net_admin+ep mpts2spts` again after each build.
 
+## Releasing a new version
+
+A release is a git tag. The version is never written in a source file: the build takes it from the tag (`-X main.version=…`), and it appears in `mpts2spts -version`, the web UI footer and the package names.
+
+1. Pick the next version with [semantic versioning](https://semver.org): `vMAJOR.MINOR.PATCH`. Bump PATCH for fixes only, MINOR for new features, MAJOR for changes that break existing setups. `git tag --sort=-v:refname | head -1` shows the latest one.
+2. Make sure `main` holds everything you want to ship, is pushed, and the `ci` workflow passed on it:
+   ```sh
+   git checkout main && git pull
+   git status            # must be clean
+   git push origin main
+   ```
+3. Create an annotated tag and push it:
+   ```sh
+   git tag -a v1.9.0 -m "v1.9.0: short summary of the changes"
+   git push origin v1.9.0
+   ```
+4. Pushing the tag starts the `release` workflow ([.github/workflows/release.yml](.github/workflows/release.yml)). It builds the `.deb` and `.tar.gz` for amd64 and arm64, combines the checksums into `SHA256SUMS`, and publishes a GitHub Release with install instructions and release notes generated from the commits since the previous tag. Follow it on the repository's **Actions** tab. It takes a few minutes.
+5. Check the release on the [Releases page](https://github.com/supermediatech/demux-mpts-spts/releases). Edit its notes there if you want to highlight anything.
+
+A tag with a hyphen, such as `v2.0.0-rc1`, is published as a **pre-release**, so you can test a build before the real release.
+
+**If the release workflow fails**, fix the problem on `main`, then move the tag to the fixed commit and push it again. Delete any half-made release on GitHub first.
+```sh
+git tag -d v1.9.0 && git push origin :refs/tags/v1.9.0
+git tag -a v1.9.0 -m "v1.9.0: …" && git push origin v1.9.0
+```
+Only do this before anyone has installed the release. Once it is out, publish a new PATCH version instead.
+
+**Building release packages locally** (without publishing): `make dist VERSION=1.9.0` writes the amd64 packages to `dist/`. For arm64, install `gcc-aarch64-linux-gnu` and run `make dist VERSION=1.9.0 ARCH=arm64 CC=aarch64-linux-gnu-gcc`. `make dist` also needs `fakeroot`.
+
 ## Usage
 
 - **Inputs**: there are four ways to add them.
