@@ -277,6 +277,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .found{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .found:empty{display:none}
 .modal.xl{width:min(1180px,100%);max-height:88vh}
+/* add / edit input page: static DOM next to #main, so the periodic re-render keeps form state */
+#pg-input{padding:22px 26px 30px;min-width:0}
+#pg-input .page-hd{align-items:center}
+#pg-input>.card{overflow:visible}
+#pg-input .card>.bd{padding:20px 22px}
+#pg-input .card>.ft{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;background:var(--panel2);border-radius:0 0 var(--radius) var(--radius);position:sticky;bottom:0;z-index:2}
 .pk-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel2);flex-wrap:wrap;font-size:13px}
 .pk-tbl{max-height:52vh;overflow:auto}
 .pk-tbl td{white-space:normal}
@@ -313,7 +319,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   .layout{grid-template-columns:1fr}
   aside{position:static;height:auto;max-height:300px;border-right:none;border-bottom:1px solid var(--line)}
   .topbar{flex-wrap:wrap}.topbar .gsearch{order:10;width:100%}.sysbar{display:none}
-  main{padding:16px}
+  main,#pg-input{padding:16px}
   .form{grid-template-columns:1fr}.form .hint{grid-column:1}
 }
 </style>
@@ -337,6 +343,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
   <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></symbol>
@@ -405,14 +412,9 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="inlist" id="inlist"></div>
   </aside>
   <main id="main"></main>
-</div>
-<footer><span>© <span id="yr"></span> Super Media Tech. All rights reserved.<span id="ver" class="muted" style="margin-left:10px"></span></span><a href="https://www.supermediatech.com" target="_blank" rel="noopener">www.supermediatech.com</a></footer>
-</div>
-
-<!-- input modal -->
-<div class="modal-bg" id="m-input"><div class="modal xl">
-  <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-in"/></svg></span><h3 id="mi-title">Add input</h3><button class="ibtn sm" onclick="closeM('m-input')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
-  <div class="bd">
+  <section id="pg-input" class="page" style="display:none">
+  <div class="page-hd"><button class="ibtn" onclick="closeInput()" title="Back" aria-label="Back"><svg class="ic lg"><use href="#i-back"/></svg></button><div><h1 id="mi-title">Add input</h1><p id="mi-sub">Discover streams, enter groups or a URL, then pick the channels to keep</p></div></div>
+  <div class="card"><div class="bd">
     <div class="seg tabs" id="mi-tabs" role="tablist">
       <button data-t="disc" onclick="miTab('disc')"><svg class="ic"><use href="#i-radar"/></svg>Discover all</button>
       <button data-t="iface" onclick="miTab('iface')"><svg class="ic"><use href="#i-layers"/></svg>By interface</button>
@@ -462,8 +464,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <div class="err-msg" id="mi-err"></div>
   </div>
-  <div class="ft"><button class="btn" onclick="closeM('m-input')">Cancel</button><button class="btn primary" id="mi-save" onclick="saveInput()">Save</button></div>
-</div></div>
+  <div class="ft"><button class="btn" onclick="closeInput()">Cancel</button><button class="btn primary" id="mi-save" onclick="saveInput()">Save</button></div></div>
+</section>
+
+</div>
+<footer><span>© <span id="yr"></span> Super Media Tech. All rights reserved.<span id="ver" class="muted" style="margin-left:10px"></span></span><a href="https://www.supermediatech.com" target="_blank" rel="noopener">www.supermediatech.com</a></footer>
+</div>
 
 <!-- output modal -->
 <div class="modal-bg" id="m-out"><div class="modal">
@@ -565,6 +571,7 @@ async function start(){
   try{await refresh()}catch(e){return}
   $('#login').style.display='none';$('#app').style.display='flex';
   IFS=await api('GET','api/interfaces');
+  if(view==='addin'){miSetup();render()}
   startTimer();
 }
 // status refresh interval (Settings → Refresh every), default 5 s
@@ -711,7 +718,10 @@ function render(){
   $('#nav-progs-n').textContent=nProgs;$('#nav-inputs-n').textContent=S.inputs.length;$('#nav-outputs-n').textContent=S.outputs.length;
   $('#nav-home').classList.toggle('on',!g&&view==='home'&&sel===null);
   ['progs','inputs','outputs'].forEach(v=>$('#nav-'+v).classList.toggle('on',!g&&view===v));
-  $('#main').innerHTML=g?searchView(g):view==='progs'?programsView():view==='inputs'?inputsView():view==='outputs'?outputsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
+  if(view==='addin'&&editIn!==null&&!S.inputs.find(i=>i.id===editIn)){view='home';editIn=null}
+  const onPage=view==='addin'&&!g;
+  $('#main').style.display=onPage?'none':'';$('#pg-input').style.display=onPage?'':'none';
+  if(!onPage) $('#main').innerHTML=g?searchView(g):view==='progs'?programsView():view==='inputs'?inputsView():view==='outputs'?outputsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
   syncHash();
   if(fid&&ae!==document.activeElement){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(fs,fe)}catch(e){}}}
   if(hov){const el=document.querySelector(`.spark[data-k="${hov.k}"]`);if(el)sparkAt(el,hov.x);else{hov=null;$('#tip').style.display='none'}}
@@ -720,23 +730,25 @@ function pick(id){view='home';if(sel!==id){sel=id;checked.clear();q.svc=''}$('#g
 function goView(v){view=v;sel=null;checked.clear();$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
 function goProgs(){goView('progs')}
 function goHome(){view='home';sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';navPush=true;render();window.scrollTo({top:0})}
-// ---------- routes: #/  #/inputs  #/programs  #/outputs  #/input/<id>  #/search/<text>  (survive a browser refresh) ----------
+// ---------- routes: #/  #/inputs  #/inputs/new  #/programs  #/outputs  #/input/<id>  #/input/<id>/edit  #/search/<text>  (survive a browser refresh) ----------
 let navPush=false;
-function wantHash(){const g=$('#gq').value.trim();return g?'#/search/'+encodeURIComponent(g):view==='progs'?'#/programs':view==='inputs'?'#/inputs':view==='outputs'?'#/outputs':sel!==null?'#/input/'+sel:'#/'}
+function wantHash(){const g=$('#gq').value.trim();return g?'#/search/'+encodeURIComponent(g):view==='addin'?(editIn!==null?`#/input/${editIn}/edit`:'#/inputs/new'):view==='progs'?'#/programs':view==='inputs'?'#/inputs':view==='outputs'?'#/outputs':sel!==null?'#/input/'+sel:'#/'}
 function syncHash(){
   const h=wantHash(),cur=location.hash||'#/',push=navPush;navPush=false;
   if(h!==cur) history[push?'pushState':'replaceState'](null,'',h);
 }
 function applyRoute(){
-  const [p,a='']=(location.hash||'#/').replace(/^#\/?/,'').split('/');let g='';
+  const [p,a='',b='']=(location.hash||'#/').replace(/^#\/?/,'').split('/');let g='';
   view='home';sel=null;checked.clear();
-  if(p==='programs') view='progs';
+  if(p==='inputs'&&a==='new'){view='addin';editIn=null}
+  else if(p==='input'&&/^\d+$/.test(a)&&b==='edit'){view='addin';editIn=+a}
+  else if(p==='programs') view='progs';
   else if(p==='inputs'||p==='outputs') view=p;
   else if(p==='input'&&/^\d+$/.test(a)) sel=+a;
   else if(p==='search'){try{g=decodeURIComponent(a)}catch(e){g=a}}
   $('#gq').value=g;
 }
-window.addEventListener('popstate',()=>{applyRoute();if($('#app').style.display!=='none'){render();window.scrollTo({top:0})}});
+window.addEventListener('popstate',()=>{applyRoute();miPushed=false;if($('#app').style.display!=='none'){if(view==='addin'&&miFor!==(editIn??'new'))miSetup();render();window.scrollTo({top:0})}});
 function tsearch(key,ph){return `<div class="field-ic tsearch">${icon('search')}<input type="text" id="ts-${key}" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;render()"></div>`}
 
 function outCard(title,list,showInput){
@@ -1047,9 +1059,23 @@ function miBuild(){
   if(miMode==='iface') $('#mi-save').textContent=urls.length>1?`Add ${urls.length} inputs`:'Save';
   return urls;
 }
+// Add / Edit input is a page (#/inputs/new, #/input/<id>/edit), not a modal
+let miFor=null,miPushed=false;
 function openInput(id){
-  editIn=id??null;const i=S.inputs.find(x=>x.id===id);
+  editIn=id??null;view='addin';$('#gq').value='';miSetup();miPushed=true;navPush=true;render();window.scrollTo({top:0});
+  if(editIn===null) setTimeout(()=>$('#mi-name').focus(),0);
+}
+// back to where the user came from (or a sensible page when the form was opened by URL)
+function closeInput(){
+  if(miPushed){miPushed=false;history.back();return}
+  leaveInput(editIn);
+}
+// leave the page without a history entry for it (after saving, Back should not reopen the form)
+function leaveInput(id){miPushed=false;view='home';sel=id??null;checked.clear();miFor=null;render();window.scrollTo({top:0})}
+function miSetup(){
+  const id=editIn,i=S.inputs.find(x=>x.id===id);miFor=id??'new';
   $('#mi-title').textContent=i?'Edit input':'Add input';$('#mi-err').textContent='';
+  $('#mi-sub').textContent=i?`${i.name} · change the name, URL or the channels to keep`:'Discover streams, enter groups or a URL, then pick the channels to keep';
   $('#mi-name').value=i?.name||'';$('#mi-url').value=i?.url||'';
   $('#mi-if').innerHTML=ifOpts('');$('#sc-if').innerHTML=ifOpts('');$('#dc-if').innerHTML=ifOpts('').replace('Any (default route)','All interfaces');$('#dc-res').innerHTML='';$('#dc-msg').textContent='';
   $('#mi-group').value='';$('#mi-src').value='';$('#sc-res').innerHTML='';$('#sc-msg').textContent='';
@@ -1058,11 +1084,11 @@ function openInput(id){
   $('#mi-ch').style.display=i&&svs.length?'':'none';
   if(i&&svs.length){
     // kept channels that are not in the stream right now stay listed, so saving does not drop them
-    const have=new Set(svs.map(x=>x.sid)),gone=(i.services||[]).filter(sid=>!have.has(sid)).map(sid=>({sid,name:`Service ${sid} (not in the stream now)`,provider:'',type:0,streams:[],kbps:0}));
+    const have=new Set(svs.map(x=>x.sid)),gone=(i.services||[]).filter(sid=>!have.has(sid)).map(sid=>({sid,name:`Service ${sid} (not in the stream now)`,provider:'',type:0,streams:[],kbps:0,gone:true}));
     const rows=[...svs,...gone].map(x=>({key:String(x.sid),url:i.url,x:{...x,streams:x.streams||[]}}));
     pkOpen('ed',rows,i.services?.length?i.services.map(String):rows.map(r=>r.key),true);
   }
-  $('#mi-tabs').style.display=i?'none':'';miTab(i?'manual':'disc');miBuild();$('#mi-err').textContent='';openM('m-input');
+  $('#mi-tabs').style.display=i?'none':'';miTab(i?'manual':'disc');miBuild();$('#mi-err').textContent='';
 }
 async function saveInput(){
   const cur=S.inputs.find(x=>x.id===editIn);
@@ -1080,7 +1106,7 @@ async function saveInput(){
   }
   try{
     const r=await api(editIn?'PUT':'POST',editIn?`api/inputs/${editIn}`:'api/inputs',body);
-    closeM('m-input');sel=r.id;await refresh();toast('Input saved');
+    await refresh();leaveInput(r.id);toast('Input saved');
   }catch(e){$('#mi-err').textContent=e.message}
 }
 // ---------- channel picker: Discover / Scan results, and the channels kept on an input ----------
@@ -1121,7 +1147,7 @@ function pkRender(k){
   const t=$('#'+k+'-tbl');
   if(t){
     const rows=sorted(k,vis,{name:r=>r.x?.name||'',sid:r=>r.x?.sid||0,type:r=>r.x?stype(r.x.type):'',url:r=>r.url,rate:r=>r.x?r.x.kbps:r.skbps});
-    t.innerHTML=rows.length?`<table><thead><tr><th style="width:40px"></th>${th(k,'name','Program')}${th(k,'sid','SID')}${th(k,'type','Type')}<th>Streams</th>${p.edit?'':th(k,'url','Source stream')}${th(k,'rate','Bitrate','num')}${p.edit?'':'<th></th>'}</tr></thead><tbody>`+rows.map(r=>{
+    t.innerHTML=rows.length?`<table><thead><tr><th style="width:40px"></th>${th(k,'name','Program')}${th(k,'sid','SID')}${th(k,'type','Type')}<th>Streams</th>${p.edit?'':th(k,'url','Source stream')}${th(k,'rate','Bitrate','num')}<th></th></tr></thead><tbody>`+rows.map(r=>{
       const x=r.x,added=!p.edit&&pkAdded(r),key=esc(r.key);
       return `<tr class="${added?'pk-added':''}" onclick="if(!event.target.closest('input,a,button,.copy'))pkFlip('${k}','${key}')">
         <td><input type="checkbox" ${added||p.sel.has(r.key)?'checked':''} ${added?'disabled':''} onchange="pkOne('${k}','${key}',this.checked)" aria-label="Select ${esc(x?.name||r.url)}"></td>
@@ -1131,7 +1157,7 @@ function pkRender(k){
         <td>${x?streamChips(x):''}</td>
         ${p.edit?'':`<td class="mono" style="font-size:12px">${cp(r.url)}${r.src?`<div class="muted">from ${cp(r.src)}</div>`:''}</td>`}
         <td class="num mono">${mbps(x?x.kbps:r.skbps)} Mbps</td>
-        ${p.edit?'':`<td>${added?`<span class="pill ok">${icon('check')}Added</span>`:''}</td>`}</tr>`}).join('')+'</tbody></table>'
+        ${p.edit?`<td style="text-align:right">${x&&!x.gone&&editIn!==null?playBtn(editIn,x.sid):''}</td>`:`<td>${added?`<span class="pill ok">${icon('check')}Added</span>`:''}</td>`}</tr>`}).join('')+'</tbody></table>'
       :emptyState('search',p.q?'No matching channels':'Every channel here is audio-only',p.q?'':'Turn off <b style="display:inline;font-size:inherit">Skip audio-only</b> to see them.');
   }
   pkSaveBtn();
@@ -1159,7 +1185,7 @@ async function addPicked(k){
   const nCh=pkChosen(k).length;
   try{
     const r=await api('POST','api/inputs/bulk',{name:$('#mi-name').value,items});
-    closeM('m-input');goHome();await refresh();
+    await refresh();leaveInput(null);
     const parts=[r.ids.length&&`${r.ids.length} new input${r.ids.length>1?'s':''}`,r.updated.length&&`${r.updated.length} input${r.updated.length>1?'s':''} updated`].filter(Boolean);
     toast(`Kept ${nCh} channel${nCh>1?'s':''}${parts.length?' · '+parts.join(', '):''}`);
   }catch(e){$('#mi-err').textContent=e.message}
@@ -1179,9 +1205,8 @@ function doDiscover(){
 async function addBulk(urls,close){
   try{
     const r=await api('POST','api/inputs/bulk',{name:$('#mi-name').value,urls});
-    if(close) closeM('m-input');
-    if(r.ids.length) sel=r.ids[0];
     await refresh();
+    if(close) leaveInput(r.ids[0]??null);
     toast(`Added ${r.ids.length} input${r.ids.length===1?'':'s'}${r.skipped.length?`, ${r.skipped.length} already existed`:''}`);
     return r;
   }catch(e){$('#mi-err').textContent=e.message}
