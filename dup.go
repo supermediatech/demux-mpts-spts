@@ -11,12 +11,20 @@ package main
 //   - Two outputs clash when they send to the same group:port on overlapping
 //     interfaces, and an output may not send to an address an input receives
 //     (it would mix into that input's stream).
-//   - A program (input + service ID) gets at most one output.
+//   - A program (input + service ID) gets at most one output per egress
+//     interface (localaddr); "" (default route) counts as its own value.
 
 import (
 	"fmt"
 	"net/netip"
 )
+
+func ifaceName(la string) string {
+	if la == "" {
+		return "the default route"
+	}
+	return "interface " + la
+}
 
 func ifaceOverlap(x, y string) bool { return x == y || x == "" || y == "" }
 
@@ -56,10 +64,14 @@ func (a *App) outputClash(o Output, su StreamURL, self int64) error {
 		if x.ID == self {
 			continue
 		}
-		if self == 0 && x.InputID == o.InputID && x.SrcSID == o.SrcSID {
-			return fmt.Errorf("this program already has an output: %q → %s", x.Name, x.URL)
+		cu, err := ParseStreamURL(x.URL)
+		if err != nil {
+			continue
 		}
-		if cu, err := ParseStreamURL(x.URL); err == nil && sameDest(su, cu) {
+		if x.InputID == o.InputID && x.SrcSID == o.SrcSID && cu.LocalAddr == su.LocalAddr {
+			return fmt.Errorf("this program already has an output on %s: %q → %s", ifaceName(su.LocalAddr), x.Name, x.URL)
+		}
+		if sameDest(su, cu) {
 			return fmt.Errorf("%s is already used by output %q (%s)", su.Addr, x.Name, x.URL)
 		}
 	}
@@ -117,14 +129,19 @@ func (b *Backup) dedupe() (skippedIn, skippedOut int) {
 	}
 	b.Inputs = ins
 	var dests []StreamURL
-	progs := map[[2]int64]bool{}
+	type prog struct {
+		in  int64
+		sid int
+		la  string
+	}
+	progs := map[prog]bool{}
 	outs := b.Outputs[:0]
 	for _, o := range b.Outputs {
 		if id, ok := remap[o.InputID]; ok {
 			o.InputID = id
 		}
 		su, _ := ParseStreamURL(o.URL)
-		dup := progs[[2]int64{o.InputID, int64(o.SrcSID)}]
+		dup := progs[prog{o.InputID, o.SrcSID, su.LocalAddr}]
 		for _, d := range dests {
 			dup = dup || sameDest(su, d)
 		}
@@ -135,7 +152,7 @@ func (b *Backup) dedupe() (skippedIn, skippedOut int) {
 			skippedOut++
 			continue
 		}
-		progs[[2]int64{o.InputID, int64(o.SrcSID)}] = true
+		progs[prog{o.InputID, o.SrcSID, su.LocalAddr}] = true
 		dests = append(dests, su)
 		outs = append(outs, o)
 	}
