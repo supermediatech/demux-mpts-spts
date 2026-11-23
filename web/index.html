@@ -883,14 +883,22 @@ function loadHls(){
   if(window.Hls)return Promise.resolve();
   return new Promise((ok,no)=>{const s=document.createElement('script');s.src='hls.light.min.js';s.onload=ok;s.onerror=()=>no(new Error('cannot load the player'));document.head.appendChild(s)});
 }
-async function preview(iid,sid){
-  closePreview();
+function preview(iid,sid){
   const i=S.inputs.find(x=>x.id===iid),x=(i?.status?.services||[]).find(y=>y.sid===sid)||{};
-  $('#pv-title').textContent=x.name||`Service ${sid}`;$('#pv-sub').textContent=`${i?.name||''} · SID ${sid}${x.provider?' · '+x.provider:''}`;
+  pvStart({input_id:iid,sid},x.name||`Service ${sid}`,`${i?.name||''} · SID ${sid}${x.provider?' · '+x.provider:''}`);
+}
+// a channel in the Discover / Scan results: the stream need not be an input yet
+function previewRow(k,key){
+  const r=PK[k]?.rows.find(r=>r.key===key);if(!r?.x)return;
+  pvStart({url:r.url,sid:r.x.sid},r.x.name||`Service ${r.x.sid}`,`${r.url} · SID ${r.x.sid}${r.x.provider?' · '+r.x.provider:''}`);
+}
+async function pvStart(body,title,sub){
+  closePreview();
+  $('#pv-title').textContent=title;$('#pv-sub').textContent=sub;
   const me=PV={key:null,hls:null,ping:null};
   pvMsg('Starting preview…','busy');openM('m-prev');
   let r;
-  try{await loadHls();r=await api('POST','api/preview',{input_id:iid,sid})}
+  try{await loadHls();r=await api('POST','api/preview',body)}
   catch(e){if(PV===me)pvMsg('Preview failed: '+e.message,'err');return}
   if(PV!==me){fetch(`api/preview/${r.key}/stop`,{method:'POST'}).catch(()=>{});return} // closed while starting
   me.key=r.key;
@@ -1147,7 +1155,7 @@ function pkRender(k){
   const t=$('#'+k+'-tbl');
   if(t){
     const rows=sorted(k,vis,{name:r=>r.x?.name||'',sid:r=>r.x?.sid||0,type:r=>r.x?stype(r.x.type):'',url:r=>r.url,rate:r=>r.x?r.x.kbps:r.skbps});
-    t.innerHTML=rows.length?`<table><thead><tr><th style="width:40px"></th>${th(k,'name','Program')}${th(k,'sid','SID')}${th(k,'type','Type')}<th>Streams</th>${p.edit?'':th(k,'url','Source stream')}${th(k,'rate','Bitrate','num')}<th></th></tr></thead><tbody>`+rows.map(r=>{
+    t.innerHTML=rows.length?`<table><thead><tr><th style="width:40px"></th>${th(k,'name','Program')}${th(k,'sid','SID')}${th(k,'type','Type')}<th>Streams</th><th style="width:44px"></th>${p.edit?'':th(k,'url','Source stream')}${th(k,'rate','Bitrate','num')}${p.edit?'':'<th></th>'}</tr></thead><tbody>`+rows.map(r=>{
       const x=r.x,added=!p.edit&&pkAdded(r),key=esc(r.key);
       return `<tr class="${added?'pk-added':''}" onclick="if(!event.target.closest('input,a,button,.copy'))pkFlip('${k}','${key}')">
         <td><input type="checkbox" ${added||p.sel.has(r.key)?'checked':''} ${added?'disabled':''} onchange="pkOne('${k}','${key}',this.checked)" aria-label="Select ${esc(x?.name||r.url)}"></td>
@@ -1155,9 +1163,10 @@ function pkRender(k){
         <td class="mono">${x?x.sid:'—'}</td>
         <td>${x&&x.type?`<span class="chip">${stype(x.type)}</span>`:''}${isAudioOnly(x)?'<span class="chip audio"><i></i>audio only</span>':''}</td>
         <td>${x?streamChips(x):''}</td>
+        <td>${x&&!x.gone?(p.edit&&editIn!==null?playBtn(editIn,x.sid):`<button class="ibtn sm" title="Preview this program" aria-label="Preview" onclick="previewRow('${k}','${key}')">${icon('play')}</button>`):''}</td>
         ${p.edit?'':`<td class="mono" style="font-size:12px">${cp(r.url)}${r.src?`<div class="muted">from ${cp(r.src)}</div>`:''}</td>`}
         <td class="num mono">${mbps(x?x.kbps:r.skbps)} Mbps</td>
-        ${p.edit?`<td style="text-align:right">${x&&!x.gone&&editIn!==null?playBtn(editIn,x.sid):''}</td>`:`<td>${added?`<span class="pill ok">${icon('check')}Added</span>`:''}</td>`}</tr>`}).join('')+'</tbody></table>'
+        ${p.edit?'':`<td>${added?`<span class="pill ok">${icon('check')}Added</span>`:''}</td>`}</tr>`}).join('')+'</tbody></table>'
       :emptyState('search',p.q?'No matching channels':'Every channel here is audio-only',p.q?'':'Turn off <b style="display:inline;font-size:inherit">Skip audio-only</b> to see them.');
   }
   pkSaveBtn();

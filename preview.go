@@ -39,7 +39,9 @@ const (
 
 type preview struct {
 	key      string
-	inputID  int64
+	inputID  int64     // negative for a temporary input (a stream not added yet)
+	url      StreamURL // temporary input only
+	temp     bool
 	sid      uint16
 	outID    int64 // negative: never collides with database output IDs
 	port     int
@@ -83,6 +85,25 @@ func (ps *previews) cfgs(inputID int64) []OutCfg {
 		})
 	}
 	return out
+}
+
+// temps returns the temporary inputs previews of not-yet-added streams need.
+func (ps *previews) temps() []InputRun {
+	ps.mu.Lock()
+	var ids []int64
+	var urls []StreamURL
+	for _, p := range ps.m {
+		if p.temp {
+			ids = append(ids, p.inputID)
+			urls = append(urls, p.url)
+		}
+	}
+	ps.mu.Unlock()
+	runs := make([]InputRun, len(ids))
+	for i, id := range ids {
+		runs[i] = InputRun{ID: id, URL: urls[i], Outs: ps.cfgs(id)}
+	}
+	return runs
 }
 
 func (ps *previews) get(key string) *preview {
@@ -173,9 +194,10 @@ func ffmpegArgs(port int, dir string) []string {
 	}
 }
 
-// start launches ffmpeg for inputID/sid. The caller must re-apply the engine
-// config afterwards so the hidden output starts flowing.
-func (ps *previews) start(inputID int64, sid uint16) (*preview, error) {
+// start launches ffmpeg for inputID/sid. With temp set, the program comes
+// from a temporary input opened on url (inputID is ignored). The caller must
+// re-apply the engine config afterwards so the hidden output starts flowing.
+func (ps *previews) start(inputID int64, sid uint16, temp bool, url StreamURL) (*preview, error) {
 	ff, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		return nil, errors.New("ffmpeg is not installed on the server (apt install ffmpeg)")
@@ -188,6 +210,9 @@ func (ps *previews) start(inputID int64, sid uint16) (*preview, error) {
 	ps.nextID--
 	outID := ps.nextID
 	ps.mu.Unlock()
+	if temp {
+		inputID = outID // negative: never collides with database input IDs
+	}
 
 	port, err := freeUDPPort()
 	if err != nil {
@@ -199,7 +224,7 @@ func (ps *previews) start(inputID int64, sid uint16) (*preview, error) {
 	}
 	kb := make([]byte, 12)
 	rand.Read(kb)
-	p := &preview{key: hex.EncodeToString(kb), inputID: inputID, sid: sid, outID: outID,
+	p := &preview{key: hex.EncodeToString(kb), inputID: inputID, url: url, temp: temp, sid: sid, outID: outID,
 		port: port, dir: dir, stderr: &tailBuf{}, exited: make(chan struct{})}
 	p.lastSeen.Store(time.Now().UnixNano())
 	p.cmd = exec.Command(ff, ffmpegArgs(port, dir)...)
@@ -216,7 +241,11 @@ func (ps *previews) start(inputID int64, sid uint16) (*preview, error) {
 	ps.mu.Lock()
 	ps.m[p.key] = p
 	ps.mu.Unlock()
-	log.Printf("preview %s: input %d sid %d started (ffmpeg pid %d)", p.key, inputID, sid, p.cmd.Process.Pid)
+	if temp {
+		log.Printf("preview %s: %s sid %d started (ffmpeg pid %d)", p.key, url, sid, p.cmd.Process.Pid)
+	} else {
+		log.Printf("preview %s: input %d sid %d started (ffmpeg pid %d)", p.key, inputID, sid, p.cmd.Process.Pid)
+	}
 	return p, nil
 }
 
@@ -274,14 +303,35 @@ var previewFile = regexp.MustCompile(`^(index\.m3u8|init\.mp4|seg[0-9]+\.m4s)$`)
 
 func (a *App) startPreview(r *http.Request) (any, error) {
 	var req struct {
-		InputID int64 `json:"input_id"`
-		SID     int   `json:"sid"`
+		InputID int64  `json:"input_id"`
+		SID     int    `json:"sid"`
+		URL     string `json:"url"` // a stream that is not an input yet (Discover / Scan results)
 	}
 	if err := decode(r, &req); err != nil {
 		return nil, err
 	}
 	if req.SID < 1 || req.SID > 65535 {
 		return nil, errors.New("invalid service id")
+	}
+	if req.URL != "" {
+		su, err := ParseStreamURL(req.URL)
+		if err != nil {
+			return nil, err
+		}
+		// already an input that is running: preview through it
+		ins, err := a.store.Inputs()
+		if err != nil {
+			return nil, err
+		}
+		req.InputID = 0
+		for _, in := range ins {
+			if _, ok := a.engine.Status(in.ID); ok && in.Enabled && in.URL == req.URL {
+				req.InputID = in.ID
+			}
+		}
+		if req.InputID == 0 {
+			return a.runPreview(0, req.SID, true, su, 0)
+		}
 	}
 	st, ok := a.engine.Status(req.InputID)
 	if !ok {
@@ -300,7 +350,13 @@ func (a *App) startPreview(r *http.Request) (any, error) {
 		return nil, fmt.Errorf("this program's PMT has not been received, so there is nothing to play. "+
 			"The input is arriving at only %.0f kb/s; it is probably losing packets", st.Kbps)
 	}
-	p, err := a.prev.start(req.InputID, uint16(req.SID))
+	return a.runPreview(req.InputID, req.SID, false, StreamURL{}, svc.Kbps)
+}
+
+// runPreview starts ffmpeg, adds the hidden output (and temporary input) and
+// waits for the first playlist.
+func (a *App) runPreview(inputID int64, sid int, temp bool, su StreamURL, kbps float64) (any, error) {
+	p, err := a.prev.start(inputID, uint16(sid), temp, su)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +368,14 @@ func (a *App) startPreview(r *http.Request) (any, error) {
 	}
 	if err != nil && strings.Contains(err.Error(), "Input/output error") {
 		err = fmt.Errorf("no usable data arrived from this program (%.0f kb/s). "+
-			"The input is probably losing packets", svc.Kbps)
+			"The input is probably losing packets", kbps)
+	}
+	if err != nil && temp {
+		if st, ok := a.engine.Status(p.inputID); ok && st.Error != "" {
+			err = fmt.Errorf("cannot receive this stream: %s", st.Error)
+		} else if ok && st.Kbps == 0 {
+			err = errors.New("no data arrived from this stream. Check the interface and that the group is reachable")
+		}
 	}
 	if err != nil {
 		a.endPreview(p.key)

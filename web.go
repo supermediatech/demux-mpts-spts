@@ -86,6 +86,7 @@ func (a *App) Apply() error {
 		}
 		want = append(want, InputRun{ID: in.ID, URL: su, Outs: append(byIn[in.ID], a.prev.cfgs(in.ID)...)})
 	}
+	want = append(want, a.prev.temps()...) // previews of streams not added yet
 	a.engine.Sync(want)
 	return nil
 }
