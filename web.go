@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -110,7 +112,7 @@ func (a *App) Routes() http.Handler {
 			if v == nil {
 				v = map[string]bool{"ok": true}
 			}
-			json.NewEncoder(w).Encode(v)
+			writeJSON(w, r, v)
 		}))
 	}
 	api("GET /api/state", a.state)
@@ -703,4 +705,23 @@ func (a *App) playlist(w http.ResponseWriter, r *http.Request) {
 		su, _ := ParseStreamURL(o.URL)
 		fmt.Fprintf(w, "#EXTINF:-1 tvg-id=\"%d\",%s\n%s://@%s\n", o.OutSID, o.Name, su.Proto, su.Addr)
 	}
+}
+
+// writeJSON sends v, gzip-compressed when it is large and the client accepts
+// it: /api/state with hundreds of inputs is MBs of JSON every refresh.
+func writeJSON(w http.ResponseWriter, r *http.Request, v any) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Add("Vary", "Accept-Encoding")
+	if buf.Len() < 8<<10 || !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		w.Write(buf.Bytes())
+		return
+	}
+	w.Header().Set("Content-Encoding", "gzip")
+	gz, _ := gzip.NewWriterLevel(w, gzip.BestSpeed)
+	gz.Write(buf.Bytes())
+	gz.Close()
 }

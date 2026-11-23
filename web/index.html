@@ -141,7 +141,6 @@ aside .flt{padding:0 14px 12px;border-bottom:1px solid var(--line)}
 .initem .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .initem .rate{font-size:12px;color:var(--text2);font-variant-numeric:tabular-nums}
 .initem .u{grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
-.initem .spark{grid-column:2/4;height:22px;margin-top:4px}
 .initem .lead{display:flex;align-items:center;gap:8px}
 .initem.picked{background:var(--hover)}
 .pv-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
@@ -190,6 +189,18 @@ a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-
 .meter i{display:block;height:100%;border-radius:3px;background:var(--series);transition:width .4s}
 .meter.warn{background:color-mix(in srgb,var(--warn) 22%,var(--panel))}.meter.warn i{background:var(--warn)}
 .meter.err{background:color-mix(in srgb,var(--crit) 18%,var(--panel))}.meter.err i{background:var(--crit)}
+
+/* ---------- pager, lists at scale ---------- */
+.pager{display:flex;align-items:center;gap:6px;padding:10px 18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.pager .pg{padding:0 6px;color:var(--text2)}
+.side-more{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:12px;color:var(--muted)}
+.side-more span{flex:1}
+.intbl tbody tr{cursor:pointer}
+.intbl tbody tr:hover{background:var(--hover)}
+.intbl .nm{display:flex;align-items:center;gap:9px}
+.intbl .nm div{min-width:0}
+.intbl .u{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+.intbl .chn{font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------- dashboard ---------- */
 .health{display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow)}
@@ -250,15 +261,8 @@ a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-
 .att li .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
 .att li .why{color:var(--muted);font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .att li .ic.go{color:var(--muted)}
-.att .more{color:var(--muted);font-size:12.5px;cursor:default}
+.att .more{color:var(--muted);font-size:12.5px;cursor:default;justify-content:space-between}
 .att .more:hover{background:none}
-.dash-in td{vertical-align:middle}
-.dash-in tbody tr{cursor:pointer}
-.dash-in tbody tr:hover{background:var(--hover)}
-.dash-in .spark{height:26px;width:120px;display:inline-block;vertical-align:middle}
-.dash-in .nm{display:flex;align-items:center;gap:9px}
-.dash-in .nm div{min-width:0}
-.dash-in .nm .u{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px}
 
 /* sparkline: one series, 2px line, 10% wash, end dot with surface ring */
 .spark{position:relative;width:100%;outline:none;cursor:crosshair}
@@ -276,15 +280,6 @@ a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-
 #tip span{color:var(--muted)}
 #tip .key{display:inline-block;width:12px;height:2px;background:var(--series);vertical-align:middle;margin-right:6px;border-radius:1px}
 
-.ingrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:16px}
-.intile{border:1px solid var(--line);border-radius:11px;padding:12px 14px;cursor:pointer;background:var(--panel2);display:flex;flex-direction:column;gap:6px;transition:border-color .12s,transform .12s,box-shadow .12s;min-width:0}
-.intile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:var(--shadow);transform:translateY(-1px)}
-.intile .t{display:flex;align-items:center;gap:8px}
-.intile .t b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.intile .u{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
-.intile .spark{height:34px}
-.intile .f{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
-.intile .f b{color:var(--text);font-weight:600}
 
 .hero{padding:18px 20px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 .hero .tv{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex:none}
@@ -359,8 +354,6 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .pk-tbl tbody tr{cursor:pointer}
 .pk-tbl tbody tr.pk-added{cursor:default;opacity:.65}
 .pk-tbl .pk-name{min-width:220px}
-.chip.ch i{background:var(--muted)}.chip.ch.on i{background:var(--good)}
-.intile .chs{display:flex;flex-wrap:wrap;gap:0;min-height:20px}
 .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;display:inline-block;animation:sp .8s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 
@@ -654,16 +647,32 @@ function startTimer(){
 }
 
 // ---------- history for sparklines (client side, last 3 minutes) ----------
-const HMAX=90,H={in:[],out:[],cpu:[],inp:{}};
+const HMAX=90,H={in:[],out:[],cpu:[]};
 function pushH(arr,v){arr.push({t:Date.now(),v});if(arr.length>HMAX)arr.shift()}
+// lookups built once per refresh, so pages do not scan every output for every row
+let OI=new Map(),USED=new Map(),INB=new Map();
+function buildIdx(){
+  OI=new Map();USED=new Map();INB=new Map(S.inputs.map(i=>[i.id,i]));
+  for(const o of S.outputs){
+    let a=OI.get(o.input_id);if(!a)OI.set(o.input_id,a=[]);a.push(o);
+    const k=o.input_id+':'+o.src_sid;USED.set(k,(USED.get(k)||0)+1);
+  }
+}
+const outsOf=iid=>OI.get(iid)||[];
+const usedOf=(iid,sid)=>USED.get(iid+':'+sid)||0;
+const inOf=id=>INB.get(id);
+// a hidden tab does not poll; it catches up as soon as it is shown again
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&timer)refresh().catch(()=>{})});
 async function refresh(){
+  if(document.hidden&&S.inputs.length&&timer)return;
   S=await api('GET','api/state');
   if(timer&&timerSec!==refreshSec()) startTimer();
   if(S.version) $('#ver').textContent='· MPTS → SPTS '+(/^\d/.test(S.version)?'v':'')+S.version;
   S.inputs.forEach(i=>(i.status?.services||[]).forEach(x=>{x.streams||=[]}));
   let inR=0,outR=0;
-  S.inputs.forEach(i=>{const k=i.enabled?i.status?.kbps||0:0;inR+=k;pushH(H.inp[i.id]??=[],k)});
+  S.inputs.forEach(i=>{inR+=i.enabled?i.status?.kbps||0:0});
   S.outputs.forEach(o=>outR+=o.enabled?o.status?.kbps||0:0);
+  buildIdx();
   pushH(H.in,inR);pushH(H.out,outR);if(S.system)pushH(H.cpu,S.system.cpu);
   render();
 }
@@ -690,11 +699,25 @@ function watchLine(i){
   return '';
 }
 const emptyState=(ic,title,msg='')=>`<div class="empty">${icon(ic)}<b>${title}</b>${msg}</div>`;
+// ---------- pagination for long lists (hundreds of inputs and programs) ----------
+const PG={},PAGE=100;
+function paged(key,list){
+  const n=Math.max(1,Math.ceil(list.length/PAGE)),p=Math.max(0,Math.min(PG[key]||0,n-1));PG[key]=p;
+  const a=p*PAGE,rows=list.slice(a,a+PAGE);
+  const bar=n>1?`<div class="pager"><span>${a+1}–${a+rows.length} of ${list.length}</span><span class="sp"></span>
+    <button class="btn sm" ${p?'':'disabled'} onclick="goPage('${key}',0)" title="First page">«</button><button class="btn sm" ${p?'':'disabled'} onclick="goPage('${key}',${p-1})">‹ Prev</button>
+    <span class="pg">Page ${p+1} of ${n}</span>
+    <button class="btn sm" ${p<n-1?'':'disabled'} onclick="goPage('${key}',${p+1})">Next ›</button><button class="btn sm" ${p<n-1?'':'disabled'} onclick="goPage('${key}',${n-1})" title="Last page">»</button></div>`:'';
+  return {rows,bar};
+}
+function goPage(key,p){PG[key]=p;render();const el=document.querySelector(`[data-pg="${key}"]`);if(el&&el.getBoundingClientRect().top<0)el.scrollIntoView({block:'start'})}
+// write HTML only when it changed: keeps scroll, hover and text selection, and skips layout work
+function setHTML(el,html){if(el._h!==html){el.innerHTML=html;el._h=html}}
 
 // q holds per-table searches; they survive the periodic re-render
 const q={svc:'',out:'',ap:'',inl:''};
 const match=(query,...fields)=>{const h=fields.join(' ').toLowerCase();return query.toLowerCase().split(/\s+/).filter(Boolean).every(t=>h.includes(t))};
-const outText=o=>{const i=S.inputs.find(x=>x.id===o.input_id);return [o.name,o.provider,o.url,o.src_sid,o.out_sid,i?.name||'',o.enabled?'enabled':'disabled']};
+const outText=o=>{const i=inOf(o.input_id);return [o.name,o.provider,o.url,o.src_sid,o.out_sid,i?.name||'',o.enabled?'enabled':'disabled']};
 const svcText=x=>[x.name,x.provider,x.sid,stype(x.type),...x.streams.map(e=>e.kind+' '+e.pid)];
 const gb=b=>b>=1<<30?(b/(1<<30)).toFixed(1)+' GB':(b/(1<<20)).toFixed(0)+' MB';
 const sev=p=>p>90?'err':p>70?'warn':'';
@@ -750,7 +773,8 @@ function sparkAt(el,clientX){
   tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,tx+12)+'px';tip.style.top=Math.max(8,ty-tip.offsetHeight-10)+'px';
 }
 // ---------- throughput chart: input vs output Mbps on one axis ----------
-const niceMax=v=>{if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v))),f=v/e;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e};
+const niceMax=v=>{v=Math.max(v,1000); // kbps: the axis never goes below 1 Mbps
+  const e=Math.pow(10,Math.floor(Math.log10(v))),f=v/e;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e};
 function tchart(key,a1,a2){
   SP[key]={a1,a2};
   if(a1.length<2) return `<div class="tchart nodata" data-k="${key}"></div>`;
@@ -808,16 +832,19 @@ function render(){
   for(const id of [...inSel]) if(!S.inputs.find(i=>i.id===id)) inSel.delete(id);
   const nSel=list.filter(i=>inSel.has(i.id)).length,hidden=inSel.size-nSel;
   $('#inbar').style.display=list.length?'':'none';
-  $('#inbar').innerHTML=`<label title="Select all shown inputs"><input type="checkbox" ${nSel&&nSel===list.length?'checked':''} onchange="inSelAll(this.checked)">${inSel.size?`${inSel.size} selected${hidden?` (${hidden} hidden by filter)`:''}`:'Select all'}</label><span class="sp" style="flex:1"></span>
-    ${inSel.size?`<button class="btn sm" onclick="inSel.clear();render()">Clear</button><button class="btn sm danger" onclick="delSelIns()">${icon('trash')}Delete</button>`:''}`;
+  setHTML($('#inbar'),`<label title="Select all shown inputs"><input type="checkbox" ${nSel&&nSel===list.length?'checked':''} onchange="inSelAll(this.checked)">${inSel.size?`${inSel.size} selected${hidden?` (${hidden} hidden by filter)`:''}`:'Select all'}</label><span class="sp" style="flex:1"></span>
+    ${inSel.size?`<button class="btn sm" onclick="inSel.clear();render()">Clear</button><button class="btn sm danger" onclick="delSelIns()">${icon('trash')}Delete</button>`:''}`);
   const cb=$('#inbar input');if(cb)cb.indeterminate=nSel>0&&nSel<list.length;
-  $('#inlist').innerHTML=list.map(i=>{
-    const st=stateOf(i),n=S.outputs.filter(o=>o.input_id===i.id).length;
+  // the sidebar lists the first sideMax matches; the filter box finds the rest
+  const shown=list.slice(0,sideMax);
+  setHTML($('#inlist'),shown.map(i=>{
+    const st=stateOf(i),n=outsOf(i.id).length;
     return `<div class="initem ${i.id===sel&&!g&&view==='home'?'sel':''} ${inSel.has(i.id)?'picked':''}" onclick="pick(${i.id})">
       <span class="lead"><input type="checkbox" ${inSel.has(i.id)?'checked':''} onclick="event.stopPropagation()" onchange="inSelOne(${i.id},this.checked)" aria-label="Select ${esc(i.name)}"><span class="dot ${st}" title="${stateTxt[st]||st}${i.status?.down_since?' · down '+dur(Date.now()/1000-i.status.down_since)+', auto-reconnecting':''}"></span></span><span class="nm">${esc(i.name)}</span>
       <span class="rate">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'off'}</span>
-      <span></span><span class="u muted mono">${cp(i.url)} · ${n} out</span>
-      ${i.enabled?`<span></span>${spark('side'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps')}`:''}</div>`}).join('')||emptyState('inbox',S.inputs.length?'No match':'No inputs yet');
+      <span></span><span class="u muted mono">${cp(i.url)} · ${n} out</span></div>`}).join('')+
+    (list.length>shown.length?`<div class="side-more"><span>${shown.length} of ${list.length} shown</span><button class="btn sm" onclick="sideMax+=200;render()">Show more</button></div>`:'')
+    ||emptyState('inbox',S.inputs.length?'No match':'No inputs yet'));
   const nProgs=S.inputs.reduce((n,i)=>n+(i.enabled?svcsOf(i).length:0),0);
   $('#nav-progs-n').textContent=nProgs;$('#nav-inputs-n').textContent=S.inputs.length;$('#nav-outputs-n').textContent=S.outputs.length;
   $('#nav-home').classList.toggle('on',!g&&view==='home'&&sel===null);
@@ -825,7 +852,7 @@ function render(){
   if(view==='addin'&&editIn!==null&&!S.inputs.find(i=>i.id===editIn)){view='home';editIn=null}
   const onPage=view==='addin'&&!g;
   $('#main').style.display=onPage?'none':'';$('#pg-input').style.display=onPage?'':'none';
-  if(!onPage) $('#main').innerHTML=g?searchView(g):view==='progs'?programsView():view==='inputs'?inputsView():view==='outputs'?outputsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
+  if(!onPage) setHTML($('#main'),g?searchView(g):view==='progs'?programsView():view==='inputs'?inputsView():view==='outputs'?outputsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel)));
   syncHash();
   if(fid&&ae!==document.activeElement){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(fs,fe)}catch(e){}}}
   if(hov){const el=document.querySelector(`${hov.t?'.tchart':'.spark'}[data-k="${hov.k}"]`);if(el)(hov.t?tchartAt:sparkAt)(el,hov.x);else{hov=null;$('#tip').style.display='none'}}
@@ -833,9 +860,11 @@ function render(){
 function pick(id){view='home';if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
 function goView(v){view=v;sel=null;checked.clear();$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
 function goProgs(){goView('progs')}
+// All inputs, problems first
+function showProblems(){SORT.inl={k:'state',d:1};q.inl='';PG.inl=0;goView('inputs')}
 function goHome(){view='home';sel=null;checked.clear();$('#gq').value='';$('#filter').value='';q.svc=q.out='';navPush=true;render();window.scrollTo({top:0})}
 // ---------- routes: #/  #/inputs  #/inputs/new  #/programs  #/outputs  #/input/<id>  #/input/<id>/edit  #/search/<text>  (survive a browser refresh) ----------
-let navPush=false;
+let navPush=false,sideMax=150;
 function wantHash(){const g=$('#gq').value.trim();return g?'#/search/'+encodeURIComponent(g):view==='addin'?(editIn!==null?`#/input/${editIn}/edit`:'#/inputs/new'):view==='progs'?'#/programs':view==='inputs'?'#/inputs':view==='outputs'?'#/outputs':sel!==null?'#/input/'+sel:'#/'}
 function syncHash(){
   const h=wantHash(),cur=location.hash||'#/',push=navPush;navPush=false;
@@ -853,9 +882,10 @@ function applyRoute(){
   $('#gq').value=g;
 }
 window.addEventListener('popstate',()=>{applyRoute();miPushed=false;if($('#app').style.display!=='none'){if(view==='addin'&&miFor!==(editIn??'new'))miSetup();render();window.scrollTo({top:0})}});
-function tsearch(key,ph){return `<div class="field-ic tsearch">${icon('search')}<input type="text" id="ts-${key}" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;render()"></div>`}
+function tsearch(key,ph){return `<div class="field-ic tsearch">${icon('search')}<input type="text" id="ts-${key}" placeholder="${ph}" value="${esc(q[key])}" oninput="q['${key}']=this.value;PG['${key}']=0;render()"></div>`}
 
 function outCard(title,list,showInput){
+  // the outputs pager is shared by every page that lists outputs
   const vis=list.filter(o=>!q.out||match(q.out,...outText(o)));
   const ids=JSON.stringify(vis.map(o=>o.id)),on=vis.filter(o=>o.enabled).length;
   return `<div class="card"><div class="hd"><h2>${icon('out')}${title}</h2><span class="count">${on}/${vis.length}</span><span class="muted" style="font-size:12.5px">enabled</span><span class="sp"></span>${tsearch('out','Search outputs…')}
@@ -867,23 +897,24 @@ function outCard(title,list,showInput){
 function outRows(list,showInput){
   if(!list.length) return q.out?emptyState('search','No matching outputs'):emptyState('out','No outputs yet','Open an input and add programs to create outputs.');
   const maxK=Math.max(1,...list.map(o=>o.status?.kbps||0));
-  const inName=o=>S.inputs.find(i=>i.id===o.input_id)?.name||'';
+  const inName=o=>inOf(o.input_id)?.name||'';
   list=sorted('out',list,{on:o=>o.enabled?0:1,name:o=>o.name,sid:o=>o.out_sid,input:inName,url:o=>o.url,rate:o=>o.enabled?o.status?.kbps||0:-1,status:outStatusRank});
-  return `<div class="tablewrap"><table><thead><tr>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:120px"></th></tr></thead><tbody>`+
+  const pg=paged('out',list);list=pg.rows;
+  return `<div class="tablewrap" data-pg="out"><table><thead><tr>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:120px"></th></tr></thead><tbody>`+
   list.map(o=>{
     const s=o.status;let badge;
     if(!o.enabled) badge=`<span class="pill off">${icon('pause')}Disabled</span>`;
     else if(s?.error) badge=`<span class="pill err" title="${esc(s.error)}">${icon('xcirc')}${esc(s.error.slice(0,32))}</span>`;
     else if(s?.active) badge=`<span class="pill ok">${icon('check')}Active</span>`;
     else badge=`<span class="pill warn">${icon('clock')}Waiting</span>`;
-    const inp=S.inputs.find(i=>i.id===o.input_id),k=o.enabled?s?.kbps||0:0;
+    const inp=inOf(o.input_id),k=o.enabled?s?.kbps||0:0;
     return `<tr><td><label class="switch" title="${o.enabled?'Disable':'Enable'}"><input type="checkbox" ${o.enabled?'checked':''} onchange="toggleOut(${o.id},this.checked)"><span></span></label></td>
     <td><b>${esc(o.name)}</b>${o.provider?`<div class="muted" style="font-size:12px">${esc(o.provider)}</div>`:''}</td>
     <td class="mono">${o.src_sid}${o.out_sid!==o.src_sid?` → <b>${o.out_sid}</b>`:''}</td>
     ${showInput?`<td><a href="#" onclick="pick(${o.input_id});return false">${esc(inp?.name||'')}</a></td>`:''}
     <td class="mono">${cp(o.url)}</td>
     <td class="num mono"><div class="ratecell">${o.enabled?mbps(k)+' Mbps':'—'}${rateBar(k/maxK*100)}</div></td><td>${badge}</td>
-    <td style="text-align:right;white-space:nowrap">${playBtn(o.input_id,o.src_sid)}<button class="ibtn sm" title="Edit" onclick="openOut(${o.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delOut(${o.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>';
+    <td style="text-align:right;white-space:nowrap">${playBtn(o.input_id,o.src_sid)}<button class="ibtn sm" title="Edit" onclick="openOut(${o.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delOut(${o.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>'+pg.bar;
 }
 function kpi(ic,label,val,unit,extra='',href=''){return `<${href?`a href="${href}"`:'div'} class="tile"><div class="lbl">${icon(ic)}${label}</div><div class="val">${val}${unit?`<small>${unit}</small>`:''}</div>${extra}</${href?'a':'div'}>`}
 function overview(){
@@ -893,7 +924,7 @@ function overview(){
   const en=S.outputs.filter(o=>o.enabled),act=en.filter(o=>o.status?.active).length,y=S.system||{};
   const inR=H.in.at(-1)?.v||0,outR=H.out.at(-1)?.v||0,memP=y.mem_total?y.mem_used/y.mem_total*100:0;
   const nProgs=S.inputs.reduce((n,i)=>n+(i.enabled?svcsOf(i).length:0),0);
-  const inName=id=>S.inputs.find(i=>i.id===id)?.name||'';
+  const inName=id=>inOf(id)?.name||'';
   // what needs attention: inputs not receiving, outputs failing or waiting (on inputs that do receive)
   const okIn=new Set(S.inputs.filter(i=>stateOf(i)==='ok').map(i=>i.id));
   const att=[
@@ -921,51 +952,43 @@ function overview(){
     <div class="foot"><span>App CPU <b style="color:var(--text)">${(y.app_cpu??0).toFixed(1)}%</b> of a core</span><span>App memory <b style="color:var(--text)">${gb(y.app_rss||0)}</b></span></div></div></div>`;
   const attCard=att.length?`<div class="card"><div class="hd"><h2>${icon('alert')}Needs attention</h2><span class="count">${att.length}</span></div><ul class="att">`+
     att.slice(0,8).map(a=>`<li onclick="${a.go}" title="${esc(a.why)}"><i class="dot ${a.lvl}"></i><span class="nm">${esc(a.name)}</span><span class="why">${esc(a.why)}</span>${icon('chev')}</li>`).join('')+
-    (att.length>8?`<li class="more">+${att.length-8} more</li>`:'')+'</ul></div>':'';
-  const ins=sorted('dash',[...S.inputs].sort((a,b)=>stateRank[stateOf(a)]-stateRank[stateOf(b)]||a.name.localeCompare(b.name,undefined,{numeric:true})),
-    {name:i=>i.name,state:i=>stateRank[stateOf(i)],progs:i=>svcsOf(i).length,outs:i=>S.outputs.filter(o=>o.input_id===i.id&&o.enabled&&o.status?.active).length,rate:i=>i.enabled?i.status?.kbps||0:-1});
-  const inTable=`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${S.inputs.length}</span><span class="sp"></span><a href="#/inputs" class="btn sm">View all</a></div>
-    <div class="tablewrap"><table class="dash-in"><thead><tr>${th('dash','name','Input')}${th('dash','state','Status')}${th('dash','progs','Programs','num')}${th('dash','outs','Outputs active','num')}${th('dash','rate','Bitrate','num')}<th style="width:136px">Last ${dur(H.in.length>1?(H.in.at(-1).t-H.in[0].t)/1000:0)}</th></tr></thead><tbody>`+
-    ins.map(i=>{const st=stateOf(i),outs=S.outputs.filter(o=>o.input_id===i.id),on=outs.filter(o=>o.enabled&&o.status?.active).length;
-      return `<tr onclick="if(!event.target.closest('a,button,.copy,.spark'))pick(${i.id})">
-        <td><div class="nm"><span class="dot ${st}"></span><div><b>${esc(i.name)}</b><div class="u muted mono">${esc(i.url)}</div></div></div></td>
-        <td>${statePill(st)}${watchLine(i)?`<div style="margin-top:3px">${watchLine(i)}</div>`:''}</td>
-        <td class="num mono">${i.enabled?svcsOf(i).length:'—'}</td>
-        <td class="num mono">${on} / ${outs.length}</td>
-        <td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td>
-        <td>${i.enabled?spark('dash'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):''}</td></tr>`}).join('')+'</tbody></table></div></div>';
+    (att.length>8?`<li class="more"><span>+${att.length-8} more</span><button class="btn sm" onclick="event.stopPropagation();showProblems()">View all inputs by status</button></li>`:'')+'</ul></div>':'';
   return head+health+`<div class="kpis k4">${tiles}</div><div class="dash-grid">${chart}${sys}</div>`+
-    (attCard?`<div class="dash-grid" style="grid-template-columns:minmax(0,1fr)">${attCard}</div>`:'')+`<div style="margin-top:20px">${inTable}</div>`;
+    (attCard?`<div style="margin-top:20px">${attCard}</div>`:'');
 }
 // ---------- all inputs: status tiles with kept channels ----------
 function inputsView(){
   const head=`<div class="page-hd"><div><h1>All inputs</h1><p>Status and kept channels of every input</p></div><span class="sp"></span><button class="btn primary" onclick="openInput()">${icon('plus')}Add input</button></div>`;
   if(!S.inputs.length) return head+`<div class="card">${emptyState('radar','No inputs yet','<div style="margin-bottom:16px">Add an MPTS source. Discover finds every stream on an interface automatically.</div><button class="btn primary" onclick="openInput()">'+icon('plus')+'Add input</button>')}</div>`;
   const list=S.inputs.filter(i=>!q.inl||match(q.inl,i.name,i.url,stateTxt[stateOf(i)],...svcsOf(i).map(x=>x.name)));
-  const grid=list.map(i=>{const st=stateOf(i),s=i.status||{},n=S.outputs.filter(o=>o.input_id===i.id).length;
-    // kept channels by name; a green mark means the channel has an active output
-    let chs=svcsOf(i).map(x=>({sid:x.sid,name:x.name||'SID '+x.sid}));
-    if(!chs.length&&i.services?.length) chs=i.services.map(sid=>({sid,name:'SID '+sid}));
-    const on=sid=>S.outputs.some(o=>o.input_id===i.id&&o.src_sid===sid&&o.enabled&&o.status?.active);
-    const chHTML=chs.slice(0,8).map(c=>`<span class="chip ch ${on(c.sid)?'on':''}" title="SID ${c.sid}${on(c.sid)?' · output active':''}"><i></i>${esc(c.name)}</span>`).join('')+(chs.length>8?`<span class="chip">+${chs.length-8} more</span>`:'');
-    const kept=i.services?.length?`<b>${chs.length}</b> of ${(s.services||[]).length||'?'} channels kept`:`<b>${chs.length}</b> channels`;
-    return `<div class="intile" onclick="if(!event.target.closest('.spark'))pick(${i.id})"><div class="t"><span class="dot ${st}"></span><b>${esc(i.name)}</b>${statePill(st)}</div>
-      <div class="u mono muted">${cp(i.url)}</div>${watchLine(i)}
-      ${i.enabled?spark('g'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):'<div class="spark" style="height:34px"></div>'}
-      ${chHTML?`<div class="chs">${chHTML}</div>`:''}
-      <div class="f"><span>${kept} · <b>${n}</b> outputs</span><span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> Mbps</span></div></div>`}).join('');
-  return head+`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${list.length}</span><span class="sp"></span>${tsearch('inl','Search inputs…')}${delInsBtn(list,q.inl)}</div>${grid?`<div class="ingrid">${grid}</div>`:emptyState('search','No matching inputs')}</div>`;
+  const act=i=>outsOf(i.id).filter(o=>o.enabled&&o.status?.active).length;
+  const rows=sorted('inl',list,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],progs:i=>svcsOf(i).length,outs:act,rate:i=>i.enabled?i.status?.kbps||0:-1});
+  const pg=paged('inl',rows);
+  const table=list.length?`<div class="tablewrap" data-pg="inl"><table class="intbl"><thead><tr>${th('inl','name','Input')}${th('inl','state','Status')}${th('inl','progs','Channels')}${th('inl','outs','Outputs active','num')}${th('inl','rate','Bitrate','num')}<th style="width:84px"></th></tr></thead><tbody>`+
+    pg.rows.map(i=>{const st=stateOf(i),s=i.status||{},outs=outsOf(i.id).length,chs=svcsOf(i);
+      const names=chs.slice(0,3).map(x=>esc(x.name||'SID '+x.sid)).join(', ')+(chs.length>3?` +${chs.length-3}`:'');
+      const kept=i.services?.length?`${chs.length} of ${(s.services||[]).length||'?'}`:`${chs.length}`;
+      return `<tr onclick="if(!event.target.closest('a,button,.copy,input'))pick(${i.id})">
+        <td><div class="nm"><span class="dot ${st}"></span><div><b>${esc(i.name)}</b><div class="u muted mono">${cp(i.url)}</div></div></div></td>
+        <td>${statePill(st)}${watchLine(i)?`<div style="margin-top:3px">${watchLine(i)}</div>`:''}</td>
+        <td><b class="mono">${i.enabled?kept:'—'}</b>${i.enabled&&names?`<div class="muted chn">${names}</div>`:''}</td>
+        <td class="num mono">${act(i)} / ${outs}</td>
+        <td class="num mono">${i.enabled?mbps(s.kbps||0)+' Mbps':'—'}</td>
+        <td style="text-align:right;white-space:nowrap"><button class="ibtn sm" title="Edit" onclick="openInput(${i.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delIn(${i.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>'+pg.bar
+    :emptyState('search','No matching inputs');
+  return head+`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${list.length}</span><span class="sp"></span>${tsearch('inl','Search inputs or channels…')}${delInsBtn(list,q.inl)}</div>${table}</div>`;
 }
 function outputsView(){
   return `<div class="page-hd"><div><h1>All outputs</h1><p>${S.outputs.length} output${S.outputs.length===1?'':'s'} from every input</p></div><span class="sp"></span><button class="btn" onclick="goProgs()">${icon('plus')}Create from programs</button></div>
     ${outCard('Outputs',S.outputs,true)}`;
 }
 function searchView(g){
+  let pgI,pgS;
   const ins=S.inputs.filter(i=>match(g,i.name,i.url,stateTxt[stateOf(i)]));
   const svcs=[];S.inputs.forEach(i=>svcsOf(i).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
   const outs=S.outputs.filter(o=>match(g,...outText(o)));
-  const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>svcsOf(i).length}).map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${cp(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${svcsOf(i).length}</td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching inputs');
-  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}).map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid},${i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>':emptyState('search','No matching programs');
+  const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+(pgI=paged('sin',sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>svcsOf(i).length}))).rows.map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${cp(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${svcsOf(i).length}</td></tr>`).join('')+'</tbody></table></div>'+pgI.bar:emptyState('search','No matching inputs');
+  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+(pgS=paged('ssv',sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}))).rows.map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid},${i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>'+pgS.bar:emptyState('search','No matching programs');
   return `<div class="page-hd"><div><h1>Search results</h1><p>“${esc(g)}” · ${ins.length} inputs · ${svcs.length} programs · ${outs.length} outputs</p></div><span class="sp"></span><button class="btn" onclick="$('#gq').value='';render()">${icon('x')}Clear search</button></div>
     <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span><span class="sp"></span>${delInsBtn(ins,g)}</div>${inT}</div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${svcs.length}</span></div>${svT}</div>
@@ -973,7 +996,7 @@ function searchView(g){
 }
 const streamChips=x=>x.streams.map(e=>`<span class="chip ${e.kind}" title="stream type 0x${e.type.toString(16)}"><i></i>${e.kind} ${e.pid}</span>`).join('');
 function inputView(i){
-  const st=stateOf(i),s=i.status||{},outs=S.outputs.filter(o=>o.input_id===i.id);
+  const st=stateOf(i),s=i.status||{},outs=outsOf(i.id);
   const all=svcsOf(i),total=(s.services||[]).length,svcs=all.filter(x=>!q.svc||match(q.svc,...svcText(x)));
   const used={};outs.forEach(o=>used[o.src_sid]=(used[o.src_sid]||0)+1);
   for(const c of [...checked]) if(!all.find(x=>x.sid===c)) checked.delete(c);
@@ -1006,7 +1029,7 @@ function inputView(i){
         <div class="acts"><label class="row" style="gap:8px;color:var(--text2);font-size:13px">${i.enabled?'Enabled':'Disabled'}<span class="switch"><input type="checkbox" ${i.enabled?'checked':''} onchange="toggleIn(${i.id},this.checked)"><span></span></span></label>
           <button class="btn sm" onclick="openInput(${i.id})">${icon('edit')}Edit</button><button class="btn sm danger" onclick="delIn(${i.id})">${icon('trash')}Delete</button></div></div>
       <div class="hero-kpis">
-        <div><span>Bitrate</span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> <span style="display:inline">Mbps</span>${i.enabled?spark('h'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):''}</div>
+        <div><span>Bitrate</span><b>${i.enabled?mbps(s.kbps||0):'—'}</b> <span style="display:inline">Mbps</span></div>
         <div><span>Programs</span><b>${all.length}</b>${i.services?.length&&total?` <span style="display:inline">/ ${total}</span>`:''}</div>
         <div><span>Outputs active</span><b>${act}</b> <span style="display:inline">/ ${outs.length}</span></div>
         <div><span>TS ID</span><b class="mono" style="font-size:17px">${s.tsid||'—'}</b></div>
@@ -1063,8 +1086,8 @@ window.addEventListener('pagehide',closePreview);
 // ---------- all programs (every input) ----------
 function apRows(){
   const rows=[];
-  S.inputs.forEach(i=>{if(!i.enabled)return;svcsOf(i).forEach(x=>rows.push({i,x,k:i.id+':'+x.sid,used:S.outputs.filter(o=>o.input_id===i.id&&o.src_sid===x.sid).length}))});
-  for(const k of [...apSel]) if(!rows.find(r=>r.k===k)) apSel.delete(k);
+  S.inputs.forEach(i=>{if(!i.enabled)return;svcsOf(i).forEach(x=>rows.push({i,x,k:i.id+':'+x.sid,used:usedOf(i.id,x.sid)}))});
+  if(apSel.size){const ks=new Set(rows.map(r=>r.k));for(const k of [...apSel]) if(!ks.has(k)) apSel.delete(k)}
   return rows;
 }
 function apVisible(rows){return rows.filter(r=>(!apIn||r.i.id===+apIn)&&(!apFree||!r.used)&&(!q.ap||match(q.ap,...svcText(r.x),r.i.name,r.i.url)))}
@@ -1074,17 +1097,17 @@ function programsView(){
   const waiting=S.inputs.filter(i=>i.enabled&&!svcsOf(i).length).length,off=S.inputs.filter(i=>!i.enabled).length;
   const nVisSel=vis.filter(r=>apSel.has(r.k)).length,allChk=vis.length&&nVisSel===vis.length;
   const inOpts=S.inputs.filter(i=>i.enabled&&svcsOf(i).length).map(i=>`<option value="${i.id}" ${+apIn===i.id?'selected':''}>${esc(i.name)} (${svcsOf(i).length})</option>`).join('');
-  let table;
+  let table,pg;
   if(!rows.length) table=emptyState('clock',S.inputs.length?'No programs yet':'No inputs yet',S.inputs.length?'Programs appear here once enabled inputs are receiving and their PAT/PMT/SDT have been read.':'Add an input first.');
   else if(!vis.length) table=emptyState('search','No matching programs');
-  else table=`<div class="tablewrap"><table><thead><tr><th style="width:40px"><input type="checkbox" id="ap-all" ${allChk?'checked':''} onchange="apAll(this.checked)" aria-label="Select all shown programs"></th>${th('ap','input','Input')}${th('ap','sid','SID')}${th('ap','name','Program')}${th('ap','streams','Streams')}${th('ap','rate','Bitrate','num')}${th('ap','outs','Outputs')}<th></th></tr></thead><tbody>`+
-    sorted('ap',vis,{input:r=>r.i.name,sid:r=>r.x.sid,name:r=>r.x.name||'',type:r=>stype(r.x.type),streams:r=>r.x.streams.length,rate:r=>r.x.kbps,outs:r=>r.used}).map(r=>`<tr><td><input type="checkbox" ${apSel.has(r.k)?'checked':''} onchange="apOne('${r.k}',this.checked)" aria-label="Select ${esc(r.x.name)}"></td>
+  else table=`<div class="tablewrap" data-pg="ap"><table><thead><tr><th style="width:40px"><input type="checkbox" id="ap-all" ${allChk?'checked':''} onchange="apAll(this.checked)" aria-label="Select all shown programs"></th>${th('ap','input','Input')}${th('ap','sid','SID')}${th('ap','name','Program')}${th('ap','streams','Streams')}${th('ap','rate','Bitrate','num')}${th('ap','outs','Outputs')}<th></th></tr></thead><tbody>`+
+    (pg=paged('ap',sorted('ap',vis,{input:r=>r.i.name,sid:r=>r.x.sid,name:r=>r.x.name||'',type:r=>stype(r.x.type),streams:r=>r.x.streams.length,rate:r=>r.x.kbps,outs:r=>r.used}))).rows.map(r=>`<tr><td><input type="checkbox" ${apSel.has(r.k)?'checked':''} onchange="apOne('${r.k}',this.checked)" aria-label="Select ${esc(r.x.name)}"></td>
       <td style="max-width:150px"><a href="#" onclick="pick(${r.i.id});return false"><b>${esc(r.i.name)}</b></a><div class="muted mono" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cp(r.i.url)}</div></td>
       <td class="mono">${r.x.sid}</td><td><b>${esc(r.x.name||'—')}</b> <span class="chip" style="margin-left:4px">${stype(r.x.type)}</span>${r.x.provider?`<div class="muted" style="font-size:12px">${esc(r.x.provider)}</div>`:''}</td>
       <td>${streamChips(r.x)}</td>
       <td class="num mono"><div class="ratecell">${mbps(r.x.kbps)} Mbps${rateBar(r.x.kbps/maxK*100)}</div></td>
       <td>${r.used?`<span class="pill ok">${icon('check')}${r.used}</span>`:''}</td>
-      <td style="text-align:right;white-space:nowrap">${playBtn(r.i.id,r.x.sid)}<button class="btn sm" onclick="openOut(null,${r.x.sid},${r.i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
+      <td style="text-align:right;white-space:nowrap">${playBtn(r.i.id,r.x.sid)}<button class="btn sm" onclick="openOut(null,${r.x.sid},${r.i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>'+pg.bar;
   if(rows.length) table+=`<div class="bulk"><span class="count">${apSel.size}</span><span class="text2">selected${apSel.size>nVisSel?` (${apSel.size-nVisSel} hidden by filters)`:''} · create outputs with auto address</span><span class="sp"></span>
       ${apSel.size?`<button class="btn sm" onclick="apSel.clear();render()">Clear</button>`:''}
       <select id="ap-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
@@ -1094,8 +1117,8 @@ function programsView(){
   setTimeout(()=>{const a=$('#ap-all');if(a)a.indeterminate=nVisSel>0&&nVisSel<vis.length});
   return `<div class="page-hd"><div><h1>All programs</h1><p>${rows.length} programs from ${live} input${live===1?'':'s'}${notes?' · '+notes:''}</p></div></div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${vis.length}</span><span class="sp"></span>
-      <div class="apf"><select onchange="apIn=this.value;render()" aria-label="Filter by input"><option value="">All inputs</option>${inOpts}</select>
-      <label class="row" style="gap:7px;font-size:13px;color:var(--text2)" title="Hide programs that already have an output">Without outputs<span class="switch"><input type="checkbox" ${apFree?'checked':''} onchange="apFree=this.checked;render()"><span></span></span></label>
+      <div class="apf"><select onchange="apIn=this.value;PG.ap=0;render()" aria-label="Filter by input"><option value="">All inputs</option>${inOpts}</select>
+      <label class="row" style="gap:7px;font-size:13px;color:var(--text2)" title="Hide programs that already have an output">Without outputs<span class="switch"><input type="checkbox" ${apFree?'checked':''} onchange="apFree=this.checked;PG.ap=0;render()"><span></span></span></label>
       ${tsearch('ap','Search programs…')}</div></div>${table}</div>`;
 }
 function apOne(k,on){on?apSel.add(k):apSel.delete(k);render()}

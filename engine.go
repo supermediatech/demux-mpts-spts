@@ -142,7 +142,8 @@ type worker struct {
 	progs   map[uint16]*program
 	sdtSvc  map[uint16]sdtEntry
 	kind    [8192]uint8
-	route   [8192][]*outRT
+	routeIx [8192]uint16 // pid -> index into routes (0 = not routed); 16 KB instead of 192 KB of slice headers per input
+	routes  [][]*outRT   // routes[0] is always empty
 	cnt     [8192]uint32
 	prevCnt [8192]uint32
 	outs    map[int64]*outRT
@@ -265,7 +266,8 @@ func (w *worker) reset() {
 	w.kind = [8192]uint8{}
 	w.kind[pidPAT] = kindPAT
 	w.kind[pidSDT] = kindSDT
-	w.route = [8192][]*outRT{}
+	w.routeIx = [8192]uint16{}
+	w.routes = w.routes[:0]
 	w.cnt = [8192]uint32{}
 	w.prevCnt = [8192]uint32{}
 	w.outs = map[int64]*outRT{}
@@ -450,8 +452,10 @@ func (w *worker) handleTS(p []byte) {
 		}
 		return
 	}
-	for _, o := range w.route[pid] {
-		o.put(p)
+	if ix := w.routeIx[pid]; ix != 0 {
+		for _, o := range w.routes[ix] {
+			o.put(p)
+		}
 	}
 }
 
@@ -611,9 +615,8 @@ func restamp(pkts []byte, cc *uint8) {
 }
 
 func (w *worker) rebuildRoutes() {
-	for i := range w.route {
-		w.route[i] = w.route[i][:0]
-	}
+	w.routeIx = [8192]uint16{}
+	w.routes = append(w.routes[:0], nil)
 	for _, o := range w.outs {
 		pr := w.progs[o.cfg.SrcSID]
 		if pr == nil || pr.pmt == nil {
@@ -623,12 +626,18 @@ func (w *worker) rebuildRoutes() {
 			if pid >= pidNull || w.kind[pid] != kindNone {
 				return
 			}
-			for _, x := range w.route[pid] {
+			ix := w.routeIx[pid]
+			if ix == 0 {
+				ix = uint16(len(w.routes))
+				w.routeIx[pid] = ix
+				w.routes = append(w.routes, nil)
+			}
+			for _, x := range w.routes[ix] {
 				if x == o {
 					return
 				}
 			}
-			w.route[pid] = append(w.route[pid], o)
+			w.routes[ix] = append(w.routes[ix], o)
 		}
 		for _, pid := range pr.pids {
 			add(pid)
