@@ -16,7 +16,7 @@
   --bg:#f3f5f9;--panel:#fff;--panel2:#f8fafc;--line:#e4e8ef;--line2:#eef1f6;
   --text:#0f172a;--text2:#475569;--muted:#64748b;
   --accent:#2563eb;--accent-h:#1d4ed8;--accent-soft:#e8effd;--on-accent:#fff;
-  --series:#2a78d6;--series-wash:rgba(42,120,214,.10);
+  --series:#2a78d6;--series-wash:rgba(42,120,214,.10);--series2:#eb6834;
   --good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;
   --k-video:#2a78d6;--k-audio:#eb6834;--k-sub:#1baf7a;--k-ttx:#eda100;--k-other:#6250d6;
   --chip:#f1f4f8;--hover:#f5f7fb;--overlay:rgba(15,23,42,.45);
@@ -30,7 +30,7 @@
   --bg:#0a0e15;--panel:#121923;--panel2:#161f2b;--line:#222d3d;--line2:#1b2532;
   --text:#e6edf5;--text2:#b4c0cf;--muted:#8592a4;
   --accent:#3b82f6;--accent-h:#60a5fa;--accent-soft:#15253d;
-  --series:#3987e5;--series-wash:rgba(57,135,229,.14);
+  --series:#3987e5;--series-wash:rgba(57,135,229,.14);--series2:#d95926;
   --k-video:#3987e5;--k-audio:#d95926;--k-sub:#199e70;--k-ttx:#c98500;--k-other:#9085e9;
   --chip:#1b2532;--hover:#18212d;--overlay:rgba(0,0,0,.6);
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -8px rgba(0,0,0,.5);--shadow-lg:0 24px 64px -12px rgba(0,0,0,.7);
@@ -40,7 +40,7 @@
   --bg:#0a0e15;--panel:#121923;--panel2:#161f2b;--line:#222d3d;--line2:#1b2532;
   --text:#e6edf5;--text2:#b4c0cf;--muted:#8592a4;
   --accent:#3b82f6;--accent-h:#60a5fa;--accent-soft:#15253d;
-  --series:#3987e5;--series-wash:rgba(57,135,229,.14);
+  --series:#3987e5;--series-wash:rgba(57,135,229,.14);--series2:#d95926;
   --k-video:#3987e5;--k-audio:#d95926;--k-sub:#199e70;--k-ttx:#c98500;--k-other:#9085e9;
   --chip:#1b2532;--hover:#18212d;--overlay:rgba(0,0,0,.6);
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -8px rgba(0,0,0,.5);--shadow-lg:0 24px 64px -12px rgba(0,0,0,.7);
@@ -190,6 +190,75 @@ a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-
 .meter i{display:block;height:100%;border-radius:3px;background:var(--series);transition:width .4s}
 .meter.warn{background:color-mix(in srgb,var(--warn) 22%,var(--panel))}.meter.warn i{background:var(--warn)}
 .meter.err{background:color-mix(in srgb,var(--crit) 18%,var(--panel))}.meter.err i{background:var(--crit)}
+
+/* ---------- dashboard ---------- */
+.health{display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow)}
+.health .hi{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.health .hi .ic{width:20px;height:20px}
+.health b{display:block;font-size:15px}
+.health .hs{color:var(--muted);font-size:13px;display:flex;gap:12px;flex-wrap:wrap;margin-top:2px}
+.health .hs span{display:inline-flex;align-items:center;gap:6px}
+.health.ok .hi{background:color-mix(in srgb,var(--good) 14%,var(--panel));color:var(--good)}
+.health.warn{border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.health.warn .hi{background:color-mix(in srgb,var(--warn) 20%,var(--panel));color:color-mix(in srgb,var(--warn) 70%,var(--text))}
+.health.err{border-color:color-mix(in srgb,var(--crit) 45%,var(--line))}
+.health.err .hi{background:color-mix(in srgb,var(--crit) 14%,var(--panel));color:var(--crit)}
+.dash-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:20px;align-items:stretch}
+.dash-grid>.card{display:flex;flex-direction:column}.dash-grid .sys{flex:1;justify-content:space-between}
+.dash-grid>.card{margin-bottom:0}
+.dash-grid+.card,.dash-grid+.dash-grid{margin-top:20px}
+@media (max-width:1100px){.dash-grid{grid-template-columns:minmax(0,1fr)}}
+.kpis.k4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+@media (max-width:560px){.kpis.k4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpis.k4 .tile .val{font-size:22px}.kpis.k4 .tile .val .to{font-size:15px;margin:0 3px}}
+.tile .val .to{color:var(--muted);font-weight:500;font-size:18px;margin:0 6px}
+/* throughput chart: two series on one Mbps axis, crosshair + tooltip */
+.tch-wrap{padding:14px 18px 12px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--text2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:14px;height:3px;border-radius:2px;background:var(--series)}
+.legend i.s2{background:var(--series2)}
+.legend b{color:var(--text);font-variant-numeric:tabular-nums}
+.tchart{position:relative;height:220px;margin-left:46px;margin-top:8px;outline:none;cursor:crosshair}
+.tchart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tchart .gl{stroke:var(--line2);stroke-width:1}
+.tchart .base{stroke:var(--line);stroke-width:1}
+.tchart .l1,.tchart .l2{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.tchart .l1{stroke:var(--series)}.tchart .l2{stroke:var(--series2)}
+.tchart .a1{fill:var(--series-wash)}
+.tchart .yl{position:absolute;left:-46px;width:40px;text-align:right;font-size:11px;color:var(--muted);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.tchart .xl{position:absolute;bottom:-20px;font-size:11px;color:var(--muted)}
+.tchart .d1,.tchart .d2{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;box-shadow:0 0 0 2px var(--panel)}
+.tchart .d1{background:var(--series)}.tchart .d2{background:var(--series2)}
+.tchart .xh{position:absolute;top:0;bottom:0;width:1px;background:var(--line);display:none}
+.tchart.hov .xh{display:block}
+.tchart.nodata:before{content:"collecting…";position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--muted)}
+#tip .key.s2{background:var(--series2)}
+#tip .row2{display:block;color:var(--text2)}
+#tip .row2 b{display:inline;font-size:12.5px}
+.sys{padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+.sys .r{display:flex;align-items:baseline;gap:8px}
+.sys .r .n{font-size:13px;color:var(--text2);font-weight:500;display:flex;align-items:center;gap:7px;flex:1}
+.sys .r .n .ic{color:var(--muted)}
+.sys .r b{font-size:18px;font-variant-numeric:tabular-nums}
+.sys .r small{color:var(--muted);font-size:12px}
+.sys .spark{height:44px;margin-top:6px}
+.sys .meter{margin-top:8px}
+.sys .foot{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);border-top:1px solid var(--line2);padding-top:12px}
+.att{list-style:none;margin:0;padding:6px 0}
+.att li{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer}
+.att li:hover{background:var(--hover)}
+.att li .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
+.att li .why{color:var(--muted);font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att li .ic.go{color:var(--muted)}
+.att .more{color:var(--muted);font-size:12.5px;cursor:default}
+.att .more:hover{background:none}
+.dash-in td{vertical-align:middle}
+.dash-in tbody tr{cursor:pointer}
+.dash-in tbody tr:hover{background:var(--hover)}
+.dash-in .spark{height:26px;width:120px;display:inline-block;vertical-align:middle}
+.dash-in .nm{display:flex;align-items:center;gap:9px}
+.dash-in .nm div{min-width:0}
+.dash-in .nm .u{font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px}
 
 /* sparkline: one series, 2px line, 10% wash, end dot with surface ring */
 .spark{position:relative;width:100%;outline:none;cursor:crosshair}
@@ -343,6 +412,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
   <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
@@ -679,13 +749,47 @@ function sparkAt(el,clientX){
   const tx=r.left+r.width*x/100,ty=r.top+r.height*y/100;
   tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,tx+12)+'px';tip.style.top=Math.max(8,ty-tip.offsetHeight-10)+'px';
 }
+// ---------- throughput chart: input vs output Mbps on one axis ----------
+const niceMax=v=>{if(v<=0)return 1;const e=Math.pow(10,Math.floor(Math.log10(v))),f=v/e;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e};
+function tchart(key,a1,a2){
+  SP[key]={a1,a2};
+  if(a1.length<2) return `<div class="tchart nodata" data-k="${key}"></div>`;
+  const W=600,Hh=200,n=a1.length,max=niceMax(Math.max(...a1.map(p=>p.v),...a2.map(p=>p.v))*1.08);
+  const X=i=>W*i/(n-1),Y=v=>Hh-(v/max)*Hh;
+  const path=a=>a.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join('');
+  const d1=path(a1),d2=path(a2);
+  let grid='',yl='';
+  for(let k=0;k<=4;k++){const v=max*k/4,y=Y(v);
+    if(k)grid+=`<line class="gl" x1="0" x2="${W}" y1="${y}" y2="${y}" vector-effect="non-scaling-stroke"/>`;
+    yl+=`<span class="yl" style="top:${y/Hh*100}%">${mbps(v)}</span>`}
+  const span=Math.round((a1[n-1].t-a1[0].t)/1000);
+  return `<div class="tchart" data-k="${key}" tabindex="0" aria-label="Throughput, input ${mbps(a1[n-1].v)} Mbps, output ${mbps(a2[n-1].v)} Mbps">
+    <svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${grid}<line class="base" x1="0" x2="${W}" y1="${Hh}" y2="${Hh}" vector-effect="non-scaling-stroke"/>
+    <path class="a1" d="${d1}L${W} ${Hh}L0 ${Hh}Z"/><path class="l1" d="${d1}" vector-effect="non-scaling-stroke"/><path class="l2" d="${d2}" vector-effect="non-scaling-stroke"/></svg>
+    ${yl}<span class="xl" style="left:0">${dur(span)} ago</span><span class="xl" style="right:0">now</span>
+    <i class="xh"></i><i class="d1" style="left:100%;top:${Y(a1[n-1].v)/Hh*100}%"></i><i class="d2" style="left:100%;top:${Y(a2[n-1].v)/Hh*100}%"></i></div>`;
+}
+function tchartAt(el,clientX){
+  const s=SP[el.dataset.k];if(!s||s.a1.length<2)return;
+  const r=el.getBoundingClientRect(),n=s.a1.length,Hh=200;
+  const max=niceMax(Math.max(...s.a1.map(p=>p.v),...s.a2.map(p=>p.v))*1.08);
+  let i=Math.round((clientX-r.left)/r.width*(n-1));i=Math.max(0,Math.min(n-1,i));
+  const x=i/(n-1)*100,y1=(1-s.a1[i].v/max)*100,y2=(1-(s.a2[i]?.v||0)/max)*100;
+  el.classList.add('hov');el.querySelector('.xh').style.left=x+'%';
+  Object.assign(el.querySelector('.d1').style,{left:x+'%',top:y1+'%'});Object.assign(el.querySelector('.d2').style,{left:x+'%',top:y2+'%'});
+  const ago=Math.round((Date.now()-s.a1[i].t)/1000),tip=$('#tip');
+  tip.innerHTML=`<span>${ago<3?'now':ago+'s ago'}</span><span class="row2"><i class="key"></i>Input <b>${mbps(s.a1[i].v)} Mbps</b></span><span class="row2"><i class="key s2"></i>Output <b>${mbps(s.a2[i]?.v||0)} Mbps</b></span>`;
+  tip.style.display='block';
+  const tx=r.left+r.width*x/100,ty=r.top+r.height*Math.min(y1,y2)/100;
+  tip.style.left=(tx+12+tip.offsetWidth>window.innerWidth-8?tx-12-tip.offsetWidth:tx+12)+'px';tip.style.top=Math.max(8,ty-tip.offsetHeight-10)+'px';
+}
 document.addEventListener('pointermove',e=>{
-  const el=e.target.closest?.('.spark');
-  if(el){hov={k:el.dataset.k,x:e.clientX};sparkAt(el,e.clientX)}
-  else if(hov){hov=null;$('#tip').style.display='none';document.querySelectorAll('.spark.hov').forEach(x=>x.classList.remove('hov'))}
+  const el=e.target.closest?.('.spark,.tchart');
+  if(el){hov={k:el.dataset.k,x:e.clientX,t:el.classList.contains('tchart')};(hov.t?tchartAt:sparkAt)(el,e.clientX)}
+  else if(hov){hov=null;$('#tip').style.display='none';document.querySelectorAll('.spark.hov,.tchart.hov').forEach(x=>x.classList.remove('hov'))}
 });
-document.addEventListener('focusin',e=>{if(e.target.classList?.contains('spark')){const r=e.target.getBoundingClientRect();sparkAt(e.target,r.right-1)}});
-document.addEventListener('focusout',e=>{if(e.target.classList?.contains('spark')){$('#tip').style.display='none';e.target.classList.remove('hov')}});
+document.addEventListener('focusin',e=>{const c=e.target.classList;if(c?.contains('spark')||c?.contains('tchart')){const r=e.target.getBoundingClientRect();(c.contains('tchart')?tchartAt:sparkAt)(e.target,r.right-1)}});
+document.addEventListener('focusout',e=>{const c=e.target.classList;if(c?.contains('spark')||c?.contains('tchart')){$('#tip').style.display='none';c.remove('hov')}});
 
 // ---------- render ----------
 function render(){
@@ -724,7 +828,7 @@ function render(){
   if(!onPage) $('#main').innerHTML=g?searchView(g):view==='progs'?programsView():view==='inputs'?inputsView():view==='outputs'?outputsView():sel===null?overview():inputView(S.inputs.find(i=>i.id===sel));
   syncHash();
   if(fid&&ae!==document.activeElement){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(fs,fe)}catch(e){}}}
-  if(hov){const el=document.querySelector(`.spark[data-k="${hov.k}"]`);if(el)sparkAt(el,hov.x);else{hov=null;$('#tip').style.display='none'}}
+  if(hov){const el=document.querySelector(`${hov.t?'.tchart':'.spark'}[data-k="${hov.k}"]`);if(el)(hov.t?tchartAt:sparkAt)(el,hov.x);else{hov=null;$('#tip').style.display='none'}}
 }
 function pick(id){view='home';if(sel!==id){sel=id;checked.clear();q.svc=''}$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
 function goView(v){view=v;sel=null;checked.clear();$('#gq').value='';navPush=true;render();window.scrollTo({top:0})}
@@ -788,15 +892,50 @@ function overview(){
   const c={ok:0,nosignal:0,error:0,off:0,starting:0};S.inputs.forEach(i=>c[stateOf(i)]++);
   const en=S.outputs.filter(o=>o.enabled),act=en.filter(o=>o.status?.active).length,y=S.system||{};
   const inR=H.in.at(-1)?.v||0,outR=H.out.at(-1)?.v||0,memP=y.mem_total?y.mem_used/y.mem_total*100:0;
-  const dotLbl=(cls,n,l)=>n?`<span><i class="dot ${cls}"></i>${n} ${l}</span>`:'';
+  const nProgs=S.inputs.reduce((n,i)=>n+(i.enabled?svcsOf(i).length:0),0);
+  const inName=id=>S.inputs.find(i=>i.id===id)?.name||'';
+  // what needs attention: inputs not receiving, outputs failing or waiting (on inputs that do receive)
+  const okIn=new Set(S.inputs.filter(i=>stateOf(i)==='ok').map(i=>i.id));
+  const att=[
+    ...S.inputs.filter(i=>['error','nosignal'].includes(stateOf(i))).map(i=>({lvl:stateOf(i)==='error'?'error':'nosignal',name:i.name,why:(stateOf(i)==='error'?i.status?.error||'Error':'No signal')+(i.status?.down_since?` · down ${dur(Date.now()/1000-i.status.down_since)}`:''),go:`pick(${i.id})`})),
+    ...en.filter(o=>o.status?.error).map(o=>({lvl:'error',name:o.name,why:`Output error · ${o.status.error} · ${inName(o.input_id)}`,go:`pick(${o.input_id})`})),
+    ...en.filter(o=>!o.status?.error&&!o.status?.active&&okIn.has(o.input_id)).map(o=>({lvl:'nosignal',name:o.name,why:`Output waiting for its program · ${inName(o.input_id)}`,go:`pick(${o.input_id})`})),
+  ];
+  const nErr=att.filter(a=>a.lvl==='error').length,nWarn=att.length-nErr;
+  const hcls=nErr?'err':nWarn?'warn':'ok';
+  const htitle=!att.length?'All systems normal':`${att.length} item${att.length>1?'s':''} need${att.length>1?'':'s'} attention`;
+  const health=`<div class="health ${hcls}" role="status"><span class="hi">${icon(nErr?'xcirc':nWarn?'alert':'check')}</span><div><b>${htitle}</b><div class="hs">
+    <span><i class="dot ok"></i>${c.ok} of ${S.inputs.length} inputs receiving</span>
+    ${c.nosignal?`<span><i class="dot nosignal"></i>${c.nosignal} no signal</span>`:''}${c.error?`<span><i class="dot error"></i>${c.error} error</span>`:''}${c.off?`<span><i class="dot off"></i>${c.off} disabled</span>`:''}
+    <span>${act} of ${en.length} enabled outputs active</span></div></div></div>`;
   const tiles=
-    kpi('in','Inputs receiving',c.ok,`/ ${S.inputs.length}`,`<div class="sub">${dotLbl('nosignal',c.nosignal,'no signal')}${dotLbl('error',c.error,'error')}${dotLbl('off',c.off,'disabled')}${c.ok===S.inputs.length?'<span>'+icon('check')+' all healthy</span>':''}</div>`,'#/inputs')+
+    kpi('in','Inputs receiving',c.ok,`/ ${S.inputs.length}`,`<div class="sub">${c.ok===S.inputs.length?'<span>'+icon('check')+' all receiving</span>':`<span>${S.inputs.length-c.ok} not receiving</span>`}</div>`,'#/inputs')+
     kpi('out','Outputs active',act,`/ ${S.outputs.length}`,`<div class="sub"><span>${en.length} enabled</span>${S.outputs.length-en.length?`<span>${S.outputs.length-en.length} disabled</span>`:''}</div>`,'#/outputs')+
-    kpi('activity','Input bitrate',mbps(inR),'Mbps',spark('k-in',H.in,v=>mbps(v)+' Mbps in'))+
-    kpi('activity','Output bitrate',mbps(outR),'Mbps',spark('k-out',H.out,v=>mbps(v)+' Mbps out'))+
-    kpi('cpu','Host CPU',(y.cpu??0).toFixed(0),'%',spark('k-cpu',H.cpu,v=>v.toFixed(1)+'% CPU')+`<div class="sub"><span>${y.cores||'–'} cores</span><span>app ${(y.app_cpu??0).toFixed(1)}% of a core</span></div>`)+
-    kpi('mem','Memory',gb(y.mem_used||0).split(' ')[0],gb(y.mem_used||0).split(' ')[1]+' / '+gb(y.mem_total||0),meterHTML(memP)+`<div class="sub"><span>${memP.toFixed(0)}% used</span><span>app ${gb(y.app_rss||0)}</span></div>`);
-  return head+`<div class="kpis">${tiles}</div>`;
+    kpi('tv','Programs kept',nProgs,'',`<div class="sub"><span>across ${S.inputs.filter(i=>i.enabled).length} enabled input${S.inputs.filter(i=>i.enabled).length===1?'':'s'}</span></div>`,'#/programs')+
+    kpi('activity','Throughput',`${mbps(inR)}<span class="to">→</span>${mbps(outR)}`,'Mbps',`<div class="sub"><span>in → out</span></div>`);
+  const chart=`<div class="card"><div class="hd"><h2>${icon('activity')}Throughput</h2><span class="sp"></span><div class="legend"><span><i></i>Input <b>${mbps(inR)} Mbps</b></span><span><i class="s2"></i>Output <b>${mbps(outR)} Mbps</b></span></div></div>
+    <div class="tch-wrap" style="padding-bottom:30px">${tchart('tp',H.in,H.out)}</div></div>`;
+  const sys=`<div class="card"><div class="hd"><h2>${icon('cpu')}System</h2></div><div class="sys">
+    <div><div class="r"><span class="n">${icon('cpu')}Host CPU</span><b>${(y.cpu??0).toFixed(0)}%</b><small>${y.cores||'–'} cores</small></div>${spark('k-cpu',H.cpu,v=>v.toFixed(1)+'% CPU')}</div>
+    <div><div class="r"><span class="n">${icon('mem')}Memory</span><b>${gb(y.mem_used||0)}</b><small>of ${gb(y.mem_total||0)}</small></div>${meterHTML(memP)}</div>
+    <div class="foot"><span>App CPU <b style="color:var(--text)">${(y.app_cpu??0).toFixed(1)}%</b> of a core</span><span>App memory <b style="color:var(--text)">${gb(y.app_rss||0)}</b></span></div></div></div>`;
+  const attCard=att.length?`<div class="card"><div class="hd"><h2>${icon('alert')}Needs attention</h2><span class="count">${att.length}</span></div><ul class="att">`+
+    att.slice(0,8).map(a=>`<li onclick="${a.go}" title="${esc(a.why)}"><i class="dot ${a.lvl}"></i><span class="nm">${esc(a.name)}</span><span class="why">${esc(a.why)}</span>${icon('chev')}</li>`).join('')+
+    (att.length>8?`<li class="more">+${att.length-8} more</li>`:'')+'</ul></div>':'';
+  const ins=sorted('dash',[...S.inputs].sort((a,b)=>stateRank[stateOf(a)]-stateRank[stateOf(b)]||a.name.localeCompare(b.name,undefined,{numeric:true})),
+    {name:i=>i.name,state:i=>stateRank[stateOf(i)],progs:i=>svcsOf(i).length,outs:i=>S.outputs.filter(o=>o.input_id===i.id&&o.enabled&&o.status?.active).length,rate:i=>i.enabled?i.status?.kbps||0:-1});
+  const inTable=`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${S.inputs.length}</span><span class="sp"></span><a href="#/inputs" class="btn sm">View all</a></div>
+    <div class="tablewrap"><table class="dash-in"><thead><tr>${th('dash','name','Input')}${th('dash','state','Status')}${th('dash','progs','Programs','num')}${th('dash','outs','Outputs active','num')}${th('dash','rate','Bitrate','num')}<th style="width:136px">Last ${dur(H.in.length>1?(H.in.at(-1).t-H.in[0].t)/1000:0)}</th></tr></thead><tbody>`+
+    ins.map(i=>{const st=stateOf(i),outs=S.outputs.filter(o=>o.input_id===i.id),on=outs.filter(o=>o.enabled&&o.status?.active).length;
+      return `<tr onclick="if(!event.target.closest('a,button,.copy,.spark'))pick(${i.id})">
+        <td><div class="nm"><span class="dot ${st}"></span><div><b>${esc(i.name)}</b><div class="u muted mono">${esc(i.url)}</div></div></div></td>
+        <td>${statePill(st)}${watchLine(i)?`<div style="margin-top:3px">${watchLine(i)}</div>`:''}</td>
+        <td class="num mono">${i.enabled?svcsOf(i).length:'—'}</td>
+        <td class="num mono">${on} / ${outs.length}</td>
+        <td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td>
+        <td>${i.enabled?spark('dash'+i.id,H.inp[i.id]||[],v=>mbps(v)+' Mbps'):''}</td></tr>`}).join('')+'</tbody></table></div></div>';
+  return head+health+`<div class="kpis k4">${tiles}</div><div class="dash-grid">${chart}${sys}</div>`+
+    (attCard?`<div class="dash-grid" style="grid-template-columns:minmax(0,1fr)">${attCard}</div>`:'')+`<div style="margin-top:20px">${inTable}</div>`;
 }
 // ---------- all inputs: status tiles with kept channels ----------
 function inputsView(){
