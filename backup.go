@@ -196,10 +196,12 @@ func (a *App) restore(r *http.Request) (any, error) {
 	if err := b.validate(); err != nil {
 		return nil, err
 	}
+	skipIn, skipOut := b.dedupe()
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if err := a.store.Replace(b); err != nil {
 		return nil, uniqueErr(err, "backup contains conflicting addresses")
 	}
-	return map[string]int{"inputs": len(b.Inputs), "outputs": len(b.Outputs), "settings": len(b.Settings)}, a.Apply()
+	return map[string]int{"inputs": len(b.Inputs), "outputs": len(b.Outputs), "settings": len(b.Settings),
+		"skipped_inputs": skipIn, "skipped_outputs": skipOut}, a.Apply()
 }

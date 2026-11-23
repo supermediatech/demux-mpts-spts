@@ -354,6 +354,11 @@ func (a *App) saveInput(r *http.Request) (any, error) {
 	in.ID = pathID(r)
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if dup, err := a.inputClash(su, in.ID); err != nil {
+		return nil, err
+	} else if dup != nil {
+		return nil, fmt.Errorf("this stream is already input %q (%s)", dup.Name, dup.URL)
+	}
 	if req.Services != nil {
 		in.Services = normSIDs(*req.Services)
 	} else if in.ID != 0 {
@@ -393,6 +398,23 @@ func (a *App) addInputs(r *http.Request) (any, error) {
 		return nil, errors.New("give 1..1024 URLs")
 	}
 	name := strings.TrimSpace(req.Name)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	// streams already added, and the ones earlier in this batch
+	type known struct {
+		url string
+		su  StreamURL
+	}
+	var have []known
+	cur, err := a.store.Inputs()
+	if err != nil {
+		return nil, err
+	}
+	for _, in := range cur {
+		if su, err := ParseStreamURL(in.URL); err == nil {
+			have = append(have, known{in.URL, su})
+		}
+	}
 	ins := make([]Input, 0, len(req.Items))
 	for _, it := range req.Items {
 		su, err := ParseStreamURL(it.URL)
@@ -400,6 +422,18 @@ func (a *App) addInputs(r *http.Request) (any, error) {
 			return nil, fmt.Errorf("%s: %w", it.URL, err)
 		}
 		in := Input{URL: su.String(), Name: su.Addr.String(), Enabled: true, Services: normSIDs(it.Services)}
+		// the same stream written differently (rtp vs udp, with or without
+		// an interface) joins the input that already receives it
+		dup := false
+		for _, k := range have {
+			if sameInput(su, k.su) {
+				in.URL, dup = k.url, true
+				break
+			}
+		}
+		if !dup {
+			have = append(have, known{in.URL, su})
+		}
 		if name != "" && len(req.Items) == 1 {
 			in.Name = name
 		} else if name != "" {
@@ -407,8 +441,6 @@ func (a *App) addInputs(r *http.Request) (any, error) {
 		}
 		ins = append(ins, in)
 	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
 	ids, updated, skipped, err := a.store.AddInputs(ins)
 	if err != nil {
 		return nil, err
@@ -558,7 +590,7 @@ func (a *App) saveOutput(r *http.Request) (any, error) {
 		}
 		cur.Addr = ap
 	} else if !cur.Addr.IsValid() {
-		ap, err := a.store.NextAutoAddr(nil)
+		ap, err := a.store.NextAutoAddr(a.inputAddrs())
 		if err != nil {
 			return nil, err
 		}
@@ -569,6 +601,9 @@ func (a *App) saveOutput(r *http.Request) (any, error) {
 		return nil, err
 	}
 	o.URL = su.String()
+	if err := a.outputClash(o, su, o.ID); err != nil {
+		return nil, err
+	}
 	if err := a.store.SaveOutput(&o); err != nil {
 		return nil, err
 	}

@@ -340,7 +340,8 @@ func (a *App) startPreview(r *http.Request) (any, error) {
 		}
 		req.InputID = 0
 		for _, in := range ins {
-			if _, ok := a.engine.Status(in.ID); ok && in.Enabled && in.URL == req.URL {
+			cu, err := ParseStreamURL(in.URL)
+			if _, ok := a.engine.Status(in.ID); ok && in.Enabled && err == nil && sameInput(su, cu) {
 				req.InputID = in.ID
 			}
 		}

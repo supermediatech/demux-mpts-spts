@@ -689,6 +689,10 @@ function buildIdx(){
   }
 }
 const outsOf=iid=>OI.get(iid)||[];
+// same stream as the server's duplicate rule: group:port + SSM source, any protocol, overlapping interface
+function suOf(u){const m=/^\w+:\/\/@?([^/?#]+)(?:\?(.*))?/.exec(u||'');const p=new URLSearchParams(m?.[2]||'');return {addr:m?.[1]||'',la:p.get('localaddr')||'',src:p.get('sources')||''}}
+const sameIn=(a,b)=>{a=suOf(a);b=suOf(b);return a.addr===b.addr&&a.src===b.src&&(a.la===b.la||!a.la||!b.la)};
+const inByStream=u=>S.inputs.find(i=>sameIn(i.url,u));
 const usedOf=(iid,sid)=>USED.get(iid+':'+sid)||0;
 const inOf=id=>INB.get(id);
 // a hidden tab does not poll; it catches up as soon as it is shown again
@@ -1026,7 +1030,7 @@ function searchView(g){
   const svcs=[];S.inputs.forEach(i=>svcsOf(i).forEach(x=>{if(match(g,...svcText(x),i.name))svcs.push([i,x])}));
   const outs=S.outputs.filter(o=>match(g,...outText(o)));
   const inT=ins.length?`<div class="tablewrap"><table><thead><tr>${th('sin','name','Input')}${th('sin','url','URL')}${th('sin','state','Status')}${th('sin','rate','Bitrate','num')}${th('sin','progs','Programs','num')}</tr></thead><tbody>`+(pgI=paged('sin',sorted('sin',ins,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],rate:i=>i.enabled?i.status?.kbps||0:-1,progs:i=>svcsOf(i).length}))).rows.map(i=>`<tr style="cursor:pointer" onclick="pick(${i.id})"><td><b>${esc(i.name)}</b></td><td class="mono">${cp(i.url)}</td><td>${statePill(stateOf(i))}</td><td class="num mono">${i.enabled?mbps(i.status?.kbps||0)+' Mbps':'—'}</td><td class="num">${svcsOf(i).length}</td></tr>`).join('')+'</tbody></table></div>'+pgI.bar:emptyState('search','No matching inputs');
-  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+(pgS=paged('ssv',sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}))).rows.map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid},${i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>'+pgS.bar:emptyState('search','No matching programs');
+  const svT=svcs.length?`<div class="tablewrap"><table><thead><tr>${th('ssv','sid','SID')}${th('ssv','name','Program')}${th('ssv','input','Input')}${th('ssv','streams','Streams')}${th('ssv','rate','Bitrate','num')}<th></th></tr></thead><tbody>`+(pgS=paged('ssv',sorted('ssv',svcs,{sid:([,x])=>x.sid,name:([,x])=>x.name||'',input:([i])=>i.name,streams:([,x])=>x.streams.length,rate:([,x])=>x.kbps}))).rows.map(([i,x])=>`<tr><td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td><td><a href="#" onclick="pick(${i.id});return false">${esc(i.name)}</a></td><td>${streamChips(x)}</td><td class="num mono">${mbps(x.kbps)} Mbps</td><td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}${outBtn(i.id,x.sid,usedOf(i.id,x.sid))}</td></tr>`).join('')+'</tbody></table></div>'+pgS.bar:emptyState('search','No matching programs');
   return `<div class="page-hd"><div><h1>Search results</h1><p>“${esc(g)}” · ${ins.length} inputs · ${svcs.length} programs · ${outs.length} outputs</p></div><span class="sp"></span><button class="btn" onclick="$('#gq').value='';render()">${icon('x')}Clear search</button></div>
     <div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${ins.length}</span><span class="sp"></span>${delInsBtn(ins,g)}</div>${inT}</div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${svcs.length}</span></div>${svT}</div>
@@ -1037,21 +1041,21 @@ function inputView(i){
   const st=stateOf(i),s=i.status||{},outs=outsOf(i.id);
   const all=svcsOf(i),total=(s.services||[]).length,svcs=all.filter(x=>!q.svc||match(q.svc,...svcText(x)));
   const used={};outs.forEach(o=>used[o.src_sid]=(used[o.src_sid]||0)+1);
-  for(const c of [...checked]) if(!all.find(x=>x.sid===c)) checked.delete(c);
-  const allChk=svcs.length&&svcs.every(x=>checked.has(x.sid));
+  for(const c of [...checked]) if(!all.find(x=>x.sid===c)||used[c]) checked.delete(c);
+  const freeS=svcs.filter(x=>!used[x.sid]),allChk=freeS.length&&freeS.every(x=>checked.has(x.sid));
   const maxK=Math.max(1,...all.map(x=>x.kbps));
   let svcTable;
   if(!i.enabled) svcTable=emptyState('pause','Input is disabled','Turn it on to read its programs.');
   else if(!all.length&&total) svcTable=emptyState('tv','None of the kept channels are in the stream now',`<div style="margin-bottom:14px">The stream carries ${total} other channel${total>1?'s':''}.</div><button class="btn primary sm" onclick="openInput(${i.id})">${icon('tv')}Choose channels</button>`);
   else if(!all.length) svcTable=st==='error'?emptyState('xcirc','Cannot open input',esc(s.error)):emptyState('clock','Waiting for programs…','Reading PAT, PMT and SDT from the stream.');
   else if(!svcs.length) svcTable=emptyState('search','No matching programs');
-  else svcTable=`<div class="tablewrap"><table><thead><tr><th style="width:40px"><input type="checkbox" ${allChk?'checked':''} onchange="chkAll(this.checked)" aria-label="Select all"></th>${th('svc','sid','SID')}${th('svc','name','Program')}${th('svc','type','Type')}${th('svc','streams','Streams')}${th('svc','rate','Bitrate','num')}${th('svc','outs','Outputs')}<th></th></tr></thead><tbody>`+
-    sorted('svc',svcs,{sid:x=>x.sid,name:x=>x.name||'',type:x=>stype(x.type),streams:x=>x.streams.length,rate:x=>x.kbps,outs:x=>used[x.sid]||0}).map(x=>`<tr><td><input type="checkbox" ${checked.has(x.sid)?'checked':''} onchange="chk(${x.sid},this.checked)" aria-label="Select ${esc(x.name)}"></td>
+  else svcTable=`<div class="tablewrap"><table><thead><tr><th style="width:40px"><input type="checkbox" ${allChk?'checked':''} ${freeS.length?'':'disabled'} onchange="chkAll(this.checked)" aria-label="Select all programs without an output"></th>${th('svc','sid','SID')}${th('svc','name','Program')}${th('svc','type','Type')}${th('svc','streams','Streams')}${th('svc','rate','Bitrate','num')}${th('svc','outs','Outputs')}<th></th></tr></thead><tbody>`+
+    sorted('svc',svcs,{sid:x=>x.sid,name:x=>x.name||'',type:x=>stype(x.type),streams:x=>x.streams.length,rate:x=>x.kbps,outs:x=>used[x.sid]||0}).map(x=>`<tr><td><input type="checkbox" ${checked.has(x.sid)||used[x.sid]?'checked':''} ${used[x.sid]?'disabled title="Already has an output"':''} onchange="chk(${x.sid},this.checked)" aria-label="Select ${esc(x.name)}"></td>
       <td class="mono">${x.sid}</td><td><b>${esc(x.name||'—')}</b>${x.provider?`<div class="muted" style="font-size:12px">${esc(x.provider)}</div>`:''}</td>
       <td><span class="chip">${stype(x.type)}</span></td><td>${streamChips(x)}</td>
       <td class="num mono"><div class="ratecell">${mbps(x.kbps)} Mbps${rateBar(x.kbps/maxK*100)}</div></td>
       <td>${used[x.sid]?`<span class="pill ok">${icon('check')}${used[x.sid]}</span>`:''}</td>
-      <td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}<button class="btn sm" onclick="openOut(null,${x.sid})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>';
+      <td style="text-align:right;white-space:nowrap">${playBtn(i.id,x.sid)}${outBtn(i.id,x.sid,used[x.sid])}</td></tr>`).join('')+'</tbody></table></div>';
   if(all.length&&i.enabled) svcTable+=
     `<div class="bulk"><span class="count">${checked.size}</span><span class="text2">selected · create outputs with auto address</span><span class="sp"></span>
       <select id="bk-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
@@ -1125,7 +1129,7 @@ window.addEventListener('pagehide',closePreview);
 function apRows(){
   const rows=[];
   S.inputs.forEach(i=>{if(!i.enabled)return;svcsOf(i).forEach(x=>rows.push({i,x,k:i.id+':'+x.sid,used:usedOf(i.id,x.sid)}))});
-  if(apSel.size){const ks=new Set(rows.map(r=>r.k));for(const k of [...apSel]) if(!ks.has(k)) apSel.delete(k)}
+  if(apSel.size){const ks=new Set(rows.filter(r=>!r.used).map(r=>r.k));for(const k of [...apSel]) if(!ks.has(k)) apSel.delete(k)}
   return rows;
 }
 function apVisible(rows){return rows.filter(r=>(!apIn||r.i.id===+apIn)&&(!apFree||!r.used)&&(!q.ap||match(q.ap,...svcText(r.x),r.i.name,r.i.url)))}
@@ -1133,26 +1137,26 @@ function programsView(){
   const rows=apRows(),vis=apVisible(rows),maxK=Math.max(1,...vis.map(r=>r.x.kbps));
   const live=S.inputs.filter(i=>i.enabled&&svcsOf(i).length).length;
   const waiting=S.inputs.filter(i=>i.enabled&&!svcsOf(i).length).length,off=S.inputs.filter(i=>!i.enabled).length;
-  const nVisSel=vis.filter(r=>apSel.has(r.k)).length,allChk=vis.length&&nVisSel===vis.length;
+  const free=vis.filter(r=>!r.used),nVisSel=free.filter(r=>apSel.has(r.k)).length,allChk=free.length&&nVisSel===free.length;
   const inOpts=S.inputs.filter(i=>i.enabled&&svcsOf(i).length).map(i=>`<option value="${i.id}" ${+apIn===i.id?'selected':''}>${esc(i.name)} (${svcsOf(i).length})</option>`).join('');
   let table,pg;
   if(!rows.length) table=emptyState('clock',S.inputs.length?'No programs yet':'No inputs yet',S.inputs.length?'Programs appear here once enabled inputs are receiving and their PAT/PMT/SDT have been read.':'Add an input first.');
   else if(!vis.length) table=emptyState('search','No matching programs');
   else table=`<div class="tablewrap" data-pg="ap"><table><thead><tr><th style="width:40px"><input type="checkbox" id="ap-all" ${allChk?'checked':''} onchange="apAll(this.checked)" aria-label="Select all shown programs"></th>${th('ap','input','Input')}${th('ap','sid','SID')}${th('ap','name','Program')}${th('ap','streams','Streams')}${th('ap','rate','Bitrate','num')}${th('ap','outs','Outputs')}<th></th></tr></thead><tbody>`+
-    (pg=paged('ap',sorted('ap',vis,{input:r=>r.i.name,sid:r=>r.x.sid,name:r=>r.x.name||'',type:r=>stype(r.x.type),streams:r=>r.x.streams.length,rate:r=>r.x.kbps,outs:r=>r.used}))).rows.map(r=>`<tr><td><input type="checkbox" ${apSel.has(r.k)?'checked':''} onchange="apOne('${r.k}',this.checked)" aria-label="Select ${esc(r.x.name)}"></td>
+    (pg=paged('ap',sorted('ap',vis,{input:r=>r.i.name,sid:r=>r.x.sid,name:r=>r.x.name||'',type:r=>stype(r.x.type),streams:r=>r.x.streams.length,rate:r=>r.x.kbps,outs:r=>r.used}))).rows.map(r=>`<tr><td><input type="checkbox" ${apSel.has(r.k)||r.used?'checked':''} ${r.used?'disabled title="Already has an output"':''} onchange="apOne('${r.k}',this.checked)" aria-label="Select ${esc(r.x.name)}"></td>
       <td style="max-width:150px"><a href="#" onclick="pick(${r.i.id});return false"><b>${esc(r.i.name)}</b></a><div class="muted mono" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cp(r.i.url)}</div></td>
       <td class="mono">${r.x.sid}</td><td><b>${esc(r.x.name||'—')}</b> <span class="chip" style="margin-left:4px">${stype(r.x.type)}</span>${r.x.provider?`<div class="muted" style="font-size:12px">${esc(r.x.provider)}</div>`:''}</td>
       <td>${streamChips(r.x)}</td>
       <td class="num mono"><div class="ratecell">${mbps(r.x.kbps)} Mbps${rateBar(r.x.kbps/maxK*100)}</div></td>
       <td>${r.used?`<span class="pill ok">${icon('check')}${r.used}</span>`:''}</td>
-      <td style="text-align:right;white-space:nowrap">${playBtn(r.i.id,r.x.sid)}<button class="btn sm" onclick="openOut(null,${r.x.sid},${r.i.id})">${icon('plus')}Output</button></td></tr>`).join('')+'</tbody></table></div>'+pg.bar;
+      <td style="text-align:right;white-space:nowrap">${playBtn(r.i.id,r.x.sid)}${outBtn(r.i.id,r.x.sid,r.used)}</td></tr>`).join('')+'</tbody></table></div>'+pg.bar;
   if(rows.length) table+=`<div class="bulk"><span class="count">${apSel.size}</span><span class="text2">selected${apSel.size>nVisSel?` (${apSel.size-nVisSel} hidden by filters)`:''} · create outputs with auto address</span><span class="sp"></span>
       ${apSel.size?`<button class="btn sm" onclick="apSel.clear();render()">Clear</button>`:''}
       <select id="ap-proto" onchange="bk.proto=this.value"><option ${bkP()==='udp'?'selected':''}>udp</option><option ${bkP()==='rtp'?'selected':''}>rtp</option></select>
       <select id="ap-if" onchange="bk.la=this.value">${ifOpts(bk.la??S.settings.auto_localaddr)}</select>
       <button class="btn primary sm" ${apSel.size?'':'disabled'} onclick="apCreate()">${icon('plus')}Create ${apSel.size||''} output${apSel.size===1?'':'s'}</button></div>`;
   const notes=[waiting&&`${waiting} enabled input${waiting>1?'s':''} without kept programs yet`,off&&`${off} disabled input${off>1?'s':''} not shown`].filter(Boolean).join(' · ');
-  setTimeout(()=>{const a=$('#ap-all');if(a)a.indeterminate=nVisSel>0&&nVisSel<vis.length});
+  setTimeout(()=>{const a=$('#ap-all');if(a){a.indeterminate=nVisSel>0&&nVisSel<free.length;a.disabled=!free.length}});
   return `<div class="page-hd"><div><h1>All programs</h1><p>${rows.length} programs from ${live} input${live===1?'':'s'}${notes?' · '+notes:''}</p></div></div>
     <div class="card"><div class="hd"><h2>${icon('tv')}Programs</h2><span class="count">${vis.length}</span><span class="sp"></span>
       <div class="apf"><select onchange="apIn=this.value;PG.ap=0;render()" aria-label="Filter by input"><option value="">All inputs</option>${inOpts}</select>
@@ -1160,10 +1164,12 @@ function programsView(){
       ${tsearch('ap','Search programs…')}</div></div>${table}</div>`;
 }
 function apOne(k,on){on?apSel.add(k):apSel.delete(k);render()}
-function apAll(on){apVisible(apRows()).forEach(r=>on?apSel.add(r.k):apSel.delete(r.k));render()}
+function apAll(on){apVisible(apRows()).filter(r=>!r.used).forEach(r=>on?apSel.add(r.k):apSel.delete(r.k));render()}
+// "+ Output" for a program, or a note that it already has one (one output per program)
+const outBtn=(iid,sid,used)=>used?`<span class="pill ok" title="This program already has an output">${icon('check')}Has output</span>`:`<button class="btn sm" onclick="openOut(null,${sid},${iid})">${icon('plus')}Output</button>`;
 async function apCreate(){
   const proto=$('#ap-proto').value,la=$('#ap-if').value;
-  const list=[...apSel].map(k=>k.split(':').map(Number)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let ok=0;
+  const list=[...apSel].map(k=>k.split(':').map(Number)).filter(([iid,sid])=>!usedOf(iid,sid)).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let ok=0;
   for(const [iid,sid] of list){
     try{await api('POST','api/outputs',{input_id:iid,src_sid:sid,proto,localaddr:la});ok++;apSel.delete(iid+':'+sid)}
     catch(e){const n=S.inputs.find(i=>i.id===iid)?.name||iid;toast(`${n} SID ${sid}: ${e.message}`,'err');break}
@@ -1242,7 +1248,7 @@ async function control(a){
   refresh();
 }
 function chk(sid,on){on?checked.add(sid):checked.delete(sid);render()}
-function chkAll(on){const i=S.inputs.find(x=>x.id===sel);svcsOf(i).filter(x=>!q.svc||match(q.svc,...svcText(x))).forEach(x=>on?checked.add(x.sid):checked.delete(x.sid));render()}
+function chkAll(on){const i=S.inputs.find(x=>x.id===sel);svcsOf(i).filter(x=>!usedOf(i.id,x.sid)&&(!q.svc||match(q.svc,...svcText(x)))).forEach(x=>on?checked.add(x.sid):checked.delete(x.sid));render()}
 function copy(t){
   const ok=()=>toast('Copied '+t),old=()=>{
     // fallback for plain http, where navigator.clipboard does not exist
@@ -1256,7 +1262,7 @@ function copy(t){
 const cp=(t,cls='')=>`<span class="copy ${cls}" title="Click to copy" data-copy="${esc(t)}" onclick="event.stopPropagation();copy(this.dataset.copy)">${esc(t)}${icon('copy')}</span>`;
 
 async function bulkCreate(){
-  const proto=$('#bk-proto').value,la=$('#bk-if').value,list=[...checked].sort((a,b)=>a-b);let ok=0;
+  const proto=$('#bk-proto').value,la=$('#bk-if').value,list=[...checked].filter(sid=>!usedOf(sel,sid)).sort((a,b)=>a-b);let ok=0;
   for(const sid of list){
     try{await api('POST','api/outputs',{input_id:sel,src_sid:sid,proto,localaddr:la});ok++}
     catch(e){toast(`SID ${sid}: ${e.message}`,'err');break}
@@ -1298,8 +1304,8 @@ function miBuild(){
   let urls=[];
   try{urls=expandGroups($('#mi-group').value,p).map(a=>`${$('#mi-proto').value}://${a}${q.length?'?'+q.join('&'):''}`);$('#mi-err').textContent=''}
   catch(e){$('#mi-err').textContent=e.message}
-  const have=new Set(S.inputs.map(i=>i.url));
-  $('#mi-preview').innerHTML=urls.length?`<div class="muted" style="font-family:inherit">${urls.length} input${urls.length>1?'s':''}</div>`+urls.map(u=>`<div>${esc(u)}${have.has(u)?' <span class="chip">exists</span>':''}</div>`).join(''):'—';
+  const nHave=urls.filter(u=>inByStream(u)).length;
+  $('#mi-preview').innerHTML=urls.length?`<div class="muted" style="font-family:inherit">${urls.length-nHave} new input${urls.length-nHave===1?'':'s'}${nHave?` · ${nHave} already added (skipped)`:''}</div>`+urls.map(u=>{const i=inByStream(u);return `<div>${esc(u)}${i?` <span class="chip" title="already input ${esc(i.name)}">exists: ${esc(i.name)}</span>`:''}</div>`}).join(''):'—';
   if(miMode==='iface') $('#mi-save').textContent=urls.length>1?`Add ${urls.length} inputs`:'Save';
   return urls;
 }
@@ -1366,7 +1372,7 @@ function showFound(k,r){
   pkOpen(k,rows,[],false);
 }
 // already added: the input exists and keeps this channel (or keeps everything)
-function pkAdded(r){const i=S.inputs.find(i=>i.url===r.url);return !!i&&(!r.x||!i.services?.length||i.services.includes(r.x.sid))}
+function pkAdded(r){const i=inByStream(r.url);return !!i&&(!r.x||!i.services?.length||i.services.includes(r.x.sid))}
 const pkSkipped=r=>skipAudio&&isAudioOnly(r.x);
 function pkVisible(k){const p=PK[k];return p.rows.filter(r=>!pkSkipped(r)&&(!p.q||match(p.q,...(r.x?svcText(r.x):[]),r.url,r.src||'')))}
 const pkPickable=(p,r)=>p.edit||!pkAdded(r);
@@ -1511,7 +1517,7 @@ async function restoreBackup(el){
   const ni=(b.inputs||[]).length,no=(b.outputs||[]).length;
   if(!confirm(`Restore "${f.name}"${b.created?' from '+new Date(b.created).toLocaleString():''}?\n\nIt has ${ni} input(s) and ${no} output(s).\nThis REPLACES the current ${S.inputs.length} input(s) and ${S.outputs.length} output(s). Download a backup first if you may need them.`))return;
   try{const r=await api('POST','api/restore',b);sel=null;inSel.clear();checked.clear();closeM('m-set');await refresh();
-    toast(`Restored ${r.inputs} input(s) and ${r.outputs} output(s)`)}catch(e){$('#st-err').textContent='Restore failed: '+e.message}
+    toast(`Restored ${r.inputs} input(s) and ${r.outputs} output(s)${r.skipped_inputs||r.skipped_outputs?` · skipped ${r.skipped_inputs} duplicate input(s) and ${r.skipped_outputs} duplicate output(s)`:''}`)}catch(e){$('#st-err').textContent='Restore failed: '+e.message}
 }
 $('#yr').textContent=new Date().getFullYear();
 start();
