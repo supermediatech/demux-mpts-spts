@@ -191,6 +191,15 @@ a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-
 .meter.warn{background:color-mix(in srgb,var(--warn) 22%,var(--panel))}.meter.warn i{background:var(--warn)}
 .meter.err{background:color-mix(in srgb,var(--crit) 18%,var(--panel))}.meter.err i{background:var(--crit)}
 
+/* ---------- playlist download ---------- */
+.pl-tbl{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pl-tbl td{vertical-align:middle}
+.pl-tbl input[type=text]{width:100%;min-width:150px}
+.pl-tbl tr.off td:not(:first-child){opacity:.45}
+.pl-tbl .from b{display:block}
+.pl-tbl .from span{font-size:12px;color:var(--muted)}
+.pl-tbl input.bad{border-color:var(--crit)}
+
 /* ---------- selection + delete warning ---------- */
 .selbar{display:flex;align-items:center;gap:10px;padding:9px 18px;background:var(--accent-soft);border-bottom:1px solid var(--line);font-size:13px;color:var(--text2);flex-wrap:wrap}
 .selbar b{color:var(--text)}
@@ -478,7 +487,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     <button onclick="control('stop')" title="Disable and stop every input"><svg class="ic"><use href="#i-stop"/></svg><span>Stop all</span></button>
     <button onclick="control('restart')" title="Reopen every input and output"><svg class="ic"><use href="#i-restart"/></svg><span>Restart all</span></button>
   </div>
-  <a class="ibtn" href="api/playlist.m3u" title="Download M3U playlist"><svg class="ic lg"><use href="#i-list"/></svg></a>
+  <button class="ibtn" onclick="openPlaylist()" title="Download M3U playlist"><svg class="ic lg"><use href="#i-list"/></svg></button>
   <button class="ibtn" onclick="openSettings()" title="Settings"><svg class="ic lg"><use href="#i-sliders"/></svg></button>
   <div class="theme-slot"></div>
   <button class="ibtn" onclick="logout()" title="Sign out"><svg class="ic lg"><use href="#i-logout"/></svg></button>
@@ -597,6 +606,17 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
   </div>
   <div class="ft"><button class="btn" onclick="closeM('m-set')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button></div>
+</div></div>
+
+<!-- playlist download -->
+<div class="modal-bg" id="m-pl"><div class="modal" style="width:min(680px,100%)">
+  <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-list"/></svg></span><h3>Download playlist</h3><button class="ibtn sm" onclick="closeM('m-pl')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="bd">
+    <div class="note"><svg class="ic"><use href="#i-info"/></svg><div>An M3U with every enabled output, grouped by the interface the outputs are sent from. For each group, choose whether to include it and which <span class="mono">localaddr</span> the playlist entries carry. That is the interface the <b>receiving</b> machine joins on, so change it to the player's address, or clear it to leave it out.</div></div>
+    <div id="pl-rows"></div>
+    <div class="err-msg" id="pl-err"></div>
+  </div>
+  <div class="ft"><span class="muted" id="pl-sum" style="flex:1;align-self:center;font-size:13px"></span><button class="btn" onclick="closeM('m-pl')">Cancel</button><button class="btn primary" id="pl-go" onclick="dlPlaylist()"><svg class="ic"><use href="#i-download"/></svg>Download</button></div>
 </div></div>
 
 <!-- delete warning -->
@@ -1503,6 +1523,36 @@ async function saveOutput(){
 async function toggleOut(id,on){await api('PUT',`api/outputs/${id}`,{enabled:on}).catch(fail);refresh()}
 function delOut(id){deleteOutputs([id])}
 
+// ---------- playlist: per sending interface, include it and set the localaddr written ----------
+let PL=[];
+function openPlaylist(){
+  const by=new Map();
+  for(const o of S.outputs){if(!o.enabled)continue;const la=suOf(o.url).la;by.set(la,(by.get(la)||0)+1)}
+  PL=[...by].sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true})).map(([la,n])=>({la,n,on:true,to:la}));
+  $('#pl-err').textContent='';
+  $('#pl-rows').innerHTML=PL.length?`<div class="pl-tbl"><table><thead><tr><th style="width:40px"></th><th>Outputs sent from</th><th class="num">Outputs</th><th>localaddr in playlist</th></tr></thead><tbody>`+
+    PL.map((g,k)=>`<tr id="pl-r${k}"><td><input type="checkbox" checked onchange="PL[${k}].on=this.checked;plSum()" aria-label="Include outputs sent from ${esc(laName(g.la))}"></td>
+      <td class="from"><b>${esc(g.la?laName(g.la):'Default route')}</b><span class="mono">${g.la?'localaddr='+esc(g.la):'no localaddr'}</span></td>
+      <td class="num mono">${g.n}</td>
+      <td><input type="text" class="mono" list="pl-ifs" value="${esc(g.la)}" placeholder="none" oninput="PL[${k}].to=this.value.trim();plSum()" aria-label="localaddr for these playlist entries"></td></tr>`).join('')+
+    `</tbody></table></div><datalist id="pl-ifs">${IFS.map(i=>`<option value="${esc(i.addr)}">${esc(i.name)}</option>`).join('')}</datalist>`
+    :emptyState('out','No enabled outputs','Create or enable outputs first.');
+  plSum();openM('m-pl');
+}
+const ipv4=v=>/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(v)&&v.split('.').every(x=>+x<=255);
+function plSum(){
+  let n=0,bad=false;
+  PL.forEach((g,k)=>{const r=$('#pl-r'+k);r.classList.toggle('off',!g.on);const inp=r.querySelector('input[type=text]');inp.disabled=!g.on;
+    const b=g.on&&g.to!==''&&!ipv4(g.to);inp.classList.toggle('bad',b);bad=bad||b;if(g.on)n+=g.n});
+  $('#pl-err').textContent=bad?'localaddr must be an IPv4 address, or empty for none':'';
+  $('#pl-sum').textContent=PL.length?`${n} entr${n===1?'y':'ies'}`:'';
+  $('#pl-go').disabled=bad||!n;
+}
+function dlPlaylist(){
+  const p=new URLSearchParams();PL.filter(g=>g.on).forEach(g=>p.append('if',g.la+':'+g.to));
+  const a=document.createElement('a');a.href='api/playlist.m3u?'+p;a.download='spts.m3u';document.body.append(a);a.click();a.remove();
+  closeM('m-pl');toast('Playlist downloaded');
+}
 function openSettings(){
   const s=S.settings;$('#st-err').textContent='';
   $('#st-group').value=s.auto_group;$('#st-port').value=s.auto_port;$('#st-proto').value=s.auto_proto;$('#st-ttl').value=s.ttl;$('#st-refresh').value=refreshSec();

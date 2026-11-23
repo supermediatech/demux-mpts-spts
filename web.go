@@ -745,7 +745,39 @@ func (a *App) discover(r *http.Request) (any, error) {
 	return Discover(strings.TrimSpace(req.LocalAddr), time.Duration(max(2, min(req.Seconds, 30)))*time.Second)
 }
 
+// playlist writes an M3U of the enabled outputs. Without parameters the
+// entries carry no localaddr. Optional query parameters, per egress
+// interface of the outputs ("" = default route):
+//
+//	if=<output localaddr>:<playlist localaddr>   include those outputs and
+//	                                             write this localaddr (empty = none)
+//	ex=<output localaddr>                        leave those outputs out
+//
+// When any if= is given, only the interfaces listed are included.
 func (a *App) playlist(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	set := map[string]string{}
+	for _, v := range q["if"] {
+		from, to, ok := strings.Cut(v, ":")
+		if !ok {
+			http.Error(w, "if= must be <output localaddr>:<playlist localaddr>", http.StatusBadRequest)
+			return
+		}
+		for _, x := range []string{from, to} {
+			if x == "" {
+				continue
+			}
+			if ad, err := netip.ParseAddr(x); err != nil || !ad.Is4() {
+				http.Error(w, "invalid localaddr "+x, http.StatusBadRequest)
+				return
+			}
+		}
+		set[from] = to
+	}
+	ex := map[string]bool{}
+	for _, v := range q["ex"] {
+		ex[v] = true
+	}
 	outs, err := a.store.Outputs()
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -758,8 +790,23 @@ func (a *App) playlist(w http.ResponseWriter, r *http.Request) {
 		if !o.Enabled {
 			continue
 		}
-		su, _ := ParseStreamURL(o.URL)
-		fmt.Fprintf(w, "#EXTINF:-1 tvg-id=\"%d\",%s\n%s://@%s\n", o.OutSID, o.Name, su.Proto, su.Addr)
+		su, err := ParseStreamURL(o.URL)
+		if err != nil || ex[su.LocalAddr] {
+			continue
+		}
+		la := ""
+		if len(set) > 0 {
+			to, ok := set[su.LocalAddr]
+			if !ok {
+				continue
+			}
+			la = to
+		}
+		u := fmt.Sprintf("%s://@%s", su.Proto, su.Addr)
+		if la != "" {
+			u += "?localaddr=" + la
+		}
+		fmt.Fprintf(w, "#EXTINF:-1 tvg-id=\"%d\",%s\n%s\n", o.OutSID, o.Name, u)
 	}
 }
 
