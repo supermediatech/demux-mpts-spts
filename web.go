@@ -50,7 +50,12 @@ func NewApp(store *Store, engine *Engine, user, pass string) *App {
 }
 
 // Apply loads the configuration from the database and pushes it to the engine.
-func (a *App) Apply() error {
+func (a *App) Apply() error { return a.applyExcept(nil, nil) }
+
+// applyExcept is Apply with some inputs and outputs left out, as if already
+// deleted. Leaving an input out stops its worker and waits for it to close
+// its sockets.
+func (a *App) applyExcept(skipIn, skipOut map[int64]bool) error {
 	ins, err := a.store.Inputs()
 	if err != nil {
 		return err
@@ -62,7 +67,7 @@ func (a *App) Apply() error {
 	ttl := parsePort(a.store.Setting("ttl"), 16)
 	byIn := map[int64][]OutCfg{}
 	for _, o := range outs {
-		if !o.Enabled {
+		if !o.Enabled || skipOut[o.ID] || skipIn[o.InputID] {
 			continue
 		}
 		su, err := ParseStreamURL(o.URL)
@@ -78,7 +83,7 @@ func (a *App) Apply() error {
 	}
 	var want []InputRun
 	for _, in := range ins {
-		if !in.Enabled {
+		if !in.Enabled || skipIn[in.ID] {
 			continue
 		}
 		su, err := ParseStreamURL(in.URL)
@@ -412,12 +417,36 @@ func (a *App) addInputs(r *http.Request) (any, error) {
 }
 
 func (a *App) deleteInput(r *http.Request) (any, error) {
+	id := pathID(r)
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.store.DeleteInput(pathID(r)); err != nil {
-		return nil, err
+	return nil, a.stopThenDelete([]int64{id}, nil, func() error { return a.store.DeleteInput(id) })
+}
+
+// stopThenDelete stops the given inputs (with their outputs and previews)
+// and outputs first, then deletes them from the database. If the delete
+// fails, everything is started again. Callers hold a.mu.
+func (a *App) stopThenDelete(inIDs, outIDs []int64, del func() error) error {
+	skipIn, skipOut := map[int64]bool{}, map[int64]bool{}
+	for _, id := range inIDs {
+		skipIn[id] = true
 	}
-	return nil, a.Apply()
+	for _, id := range outIDs {
+		skipOut[id] = true
+	}
+	ended := a.prev.takeInputs(skipIn)
+	if err := a.applyExcept(skipIn, skipOut); err != nil {
+		return err
+	}
+	for _, p := range ended {
+		p.kill()
+	}
+	log.Printf("stopped %d input(s) and %d output(s), deleting", len(inIDs), len(outIDs))
+	if err := del(); err != nil {
+		a.Apply()
+		return err
+	}
+	return a.Apply()
 }
 
 func (a *App) deleteInputs(r *http.Request) (any, error) {
@@ -429,10 +458,7 @@ func (a *App) deleteInputs(r *http.Request) (any, error) {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.store.DeleteInputs(req.IDs); err != nil {
-		return nil, err
-	}
-	return nil, a.Apply()
+	return nil, a.stopThenDelete(req.IDs, nil, func() error { return a.store.DeleteInputs(req.IDs) })
 }
 
 type outputReq struct {
@@ -550,12 +576,10 @@ func (a *App) saveOutput(r *http.Request) (any, error) {
 }
 
 func (a *App) deleteOutput(r *http.Request) (any, error) {
+	id := pathID(r)
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.store.DeleteOutput(pathID(r)); err != nil {
-		return nil, err
-	}
-	return nil, a.Apply()
+	return nil, a.stopThenDelete(nil, []int64{id}, func() error { return a.store.DeleteOutput(id) })
 }
 
 // setOutputsEnabled enables or disables a set of outputs in one transaction.
@@ -584,10 +608,7 @@ func (a *App) deleteOutputs(r *http.Request) (any, error) {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := a.store.DeleteOutputs(req.IDs); err != nil {
-		return nil, err
-	}
-	return nil, a.Apply()
+	return nil, a.stopThenDelete(nil, req.IDs, func() error { return a.store.DeleteOutputs(req.IDs) })
 }
 
 // control handles start/stop/restart of every input. Start and stop are

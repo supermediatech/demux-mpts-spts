@@ -143,6 +143,7 @@ aside .flt{padding:0 14px 12px;border-bottom:1px solid var(--line)}
 .initem .u{grid-column:2/4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
 .initem .lead{display:flex;align-items:center;gap:8px}
 .initem.picked{background:var(--hover)}
+tr.picked td{background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
 .pv-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9}
 .pv-wrap video{width:100%;height:100%;display:block;background:#000}
 .pv-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;color:#fff;font-size:14px;text-align:center;padding:20px;background:rgba(0,0,0,.55)}
@@ -189,6 +190,27 @@ a.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));text-
 .meter i{display:block;height:100%;border-radius:3px;background:var(--series);transition:width .4s}
 .meter.warn{background:color-mix(in srgb,var(--warn) 22%,var(--panel))}.meter.warn i{background:var(--warn)}
 .meter.err{background:color-mix(in srgb,var(--crit) 18%,var(--panel))}.meter.err i{background:var(--crit)}
+
+/* ---------- selection + delete warning ---------- */
+.selbar{display:flex;align-items:center;gap:10px;padding:9px 18px;background:var(--accent-soft);border-bottom:1px solid var(--line);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.selbar b{color:var(--text)}
+.selbar .sp{flex:1}
+td.ck,th.ck{width:40px}
+.btn.danger-fill{background:var(--crit);border-color:var(--crit);color:#fff}
+.btn.danger-fill:hover{background:color-mix(in srgb,var(--crit) 85%,#000)}
+.btn.danger-fill:disabled{opacity:.6}
+.logo-mark.danger-mark{width:30px;height:30px;border-radius:9px;background:color-mix(in srgb,var(--crit) 14%,var(--panel));color:var(--crit)}
+.logo-mark.danger-mark svg{stroke:var(--crit)}
+.dl-warn{display:flex;gap:10px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--warn) 16%,var(--panel));color:var(--text);font-size:13px;margin-bottom:12px}
+.dl-warn .ic{color:color-mix(in srgb,var(--warn) 70%,var(--text));margin-top:2px;flex:none}
+.dl-sum{margin:0 0 12px;line-height:1.55}
+.dl-list{list-style:none;margin:0 0 12px;padding:0;border:1px solid var(--line);border-radius:10px;max-height:220px;overflow:auto}
+.dl-list li{display:flex;align-items:center;gap:9px;padding:7px 12px;border-bottom:1px solid var(--line2);font-size:13px}
+.dl-list li:last-child{border-bottom:0}
+.dl-list li b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.dl-list li span{color:var(--muted);font-size:12px;white-space:nowrap}
+.dl-list li.more{color:var(--muted)}
+.dl-note{font-size:12.5px;color:var(--muted)}
 
 /* ---------- pager, lists at scale ---------- */
 .pager{display:flex;align-items:center;gap:6px;padding:10px 18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);flex-wrap:wrap}
@@ -577,6 +599,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="ft"><button class="btn" onclick="closeM('m-set')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save</button></div>
 </div></div>
 
+<!-- delete warning -->
+<div class="modal-bg" id="m-del"><div class="modal" style="width:min(560px,100%)" role="alertdialog" aria-labelledby="dl-title">
+  <div class="hd"><span class="logo-mark danger-mark"><svg style="width:17px;height:17px"><use href="#i-trash"/></svg></span><h3 id="dl-title">Delete</h3><button class="ibtn sm" onclick="closeM('m-del')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <div class="bd" id="dl-body"></div>
+  <div class="ft"><span class="err-msg" id="dl-err" style="margin:0;flex:1;align-self:center"></span><button class="btn" id="dl-cancel" onclick="closeM('m-del')">Cancel</button><button class="btn danger-fill" id="dl-ok">Delete</button></div>
+</div></div>
+
 <!-- program preview -->
 <div class="modal-bg" id="m-prev"><div class="modal" style="width:min(760px,100%)">
   <div class="hd"><span class="logo-mark" style="width:30px;height:30px;border-radius:9px"><svg style="width:17px;height:17px"><use href="#i-tv"/></svg></span><div style="flex:1;min-width:0"><h3 id="pv-title">Preview</h3><div class="muted" id="pv-sub" style="font-size:12.5px"></div></div><button class="ibtn sm" onclick="closeM('m-prev')" title="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
@@ -653,6 +682,7 @@ function pushH(arr,v){arr.push({t:Date.now(),v});if(arr.length>HMAX)arr.shift()}
 let OI=new Map(),USED=new Map(),INB=new Map();
 function buildIdx(){
   OI=new Map();USED=new Map();INB=new Map(S.inputs.map(i=>[i.id,i]));
+  if(outSel.size){const ids=new Set(S.outputs.map(o=>o.id));for(const id of [...outSel])if(!ids.has(id))outSel.delete(id)}
   for(const o of S.outputs){
     let a=OI.get(o.input_id);if(!a)OI.set(o.input_id,a=[]);a.push(o);
     const k=o.input_id+':'+o.src_sid;USED.set(k,(USED.get(k)||0)+1);
@@ -888,11 +918,12 @@ function outCard(title,list,showInput){
   // the outputs pager is shared by every page that lists outputs
   const vis=list.filter(o=>!q.out||match(q.out,...outText(o)));
   const ids=JSON.stringify(vis.map(o=>o.id)),on=vis.filter(o=>o.enabled).length;
+  OUTVIS=vis.map(o=>o.id);const nSel=vis.filter(o=>outSel.has(o.id)).length;
   return `<div class="card"><div class="hd"><h2>${icon('out')}${title}</h2><span class="count">${on}/${vis.length}</span><span class="muted" style="font-size:12.5px">enabled</span><span class="sp"></span>${tsearch('out','Search outputs…')}
     <label class="row" style="gap:7px;font-size:13px;color:var(--text2)" title="Enable / disable all shown outputs">All
       <span class="switch"><input type="checkbox" ${vis.length&&on===vis.length?'checked':''} ${vis.length?'':'disabled'} onchange='setOuts(${ids},this.checked)'><span></span></span></label>
-    <button class="btn sm danger" ${vis.length?'':'disabled'} onclick='delOuts(${ids})'>${icon('trash')}Delete all</button></div>
-    ${outRows(vis,showInput)}</div>`;
+</div>
+    ${selBar(nSel,'output','outSel.clear();render()','deleteOutputs([...outSel].filter(id=>OUTVIS.includes(id)))')}${outRows(vis,showInput)}</div>`;
 }
 function outRows(list,showInput){
   if(!list.length) return q.out?emptyState('search','No matching outputs'):emptyState('out','No outputs yet','Open an input and add programs to create outputs.');
@@ -900,7 +931,9 @@ function outRows(list,showInput){
   const inName=o=>inOf(o.input_id)?.name||'';
   list=sorted('out',list,{on:o=>o.enabled?0:1,name:o=>o.name,sid:o=>o.out_sid,input:inName,url:o=>o.url,rate:o=>o.enabled?o.status?.kbps||0:-1,status:outStatusRank});
   const pg=paged('out',list);list=pg.rows;
-  return `<div class="tablewrap" data-pg="out"><table><thead><tr>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:120px"></th></tr></thead><tbody>`+
+  const nSel=OUTVIS.filter(id=>outSel.has(id)).length,nVis=OUTVIS.length;
+  setTimeout(()=>{const a=$('#out-all');if(a)a.indeterminate=nSel>0&&nSel<nVis});
+  return `<div class="tablewrap" data-pg="out"><table><thead><tr><th class="ck"><input type="checkbox" id="out-all" ${nSel&&nSel===nVis?'checked':''} onchange="selOuts(this.checked)" aria-label="Select all ${nVis} shown outputs" title="Select all ${nVis} shown outputs"></th>${th('out','on','On','','width:64px')}${th('out','name','Program')}${th('out','sid','Service ID')}${showInput?th('out','input','Input'):''}${th('out','url','Output')}${th('out','rate','Bitrate','num')}${th('out','status','Status')}<th style="width:120px"></th></tr></thead><tbody>`+
   list.map(o=>{
     const s=o.status;let badge;
     if(!o.enabled) badge=`<span class="pill off">${icon('pause')}Disabled</span>`;
@@ -908,7 +941,7 @@ function outRows(list,showInput){
     else if(s?.active) badge=`<span class="pill ok">${icon('check')}Active</span>`;
     else badge=`<span class="pill warn">${icon('clock')}Waiting</span>`;
     const inp=inOf(o.input_id),k=o.enabled?s?.kbps||0:0;
-    return `<tr><td><label class="switch" title="${o.enabled?'Disable':'Enable'}"><input type="checkbox" ${o.enabled?'checked':''} onchange="toggleOut(${o.id},this.checked)"><span></span></label></td>
+    return `<tr class="${outSel.has(o.id)?'picked':''}"><td class="ck"><input type="checkbox" ${outSel.has(o.id)?'checked':''} onchange="outSelOne(${o.id},this.checked)" aria-label="Select ${esc(o.name)}"></td><td><label class="switch" title="${o.enabled?'Disable':'Enable'}"><input type="checkbox" ${o.enabled?'checked':''} onchange="toggleOut(${o.id},this.checked)"><span></span></label></td>
     <td><b>${esc(o.name)}</b>${o.provider?`<div class="muted" style="font-size:12px">${esc(o.provider)}</div>`:''}</td>
     <td class="mono">${o.src_sid}${o.out_sid!==o.src_sid?` → <b>${o.out_sid}</b>`:''}</td>
     ${showInput?`<td><a href="#" onclick="pick(${o.input_id});return false">${esc(inp?.name||'')}</a></td>`:''}
@@ -963,12 +996,15 @@ function inputsView(){
   const list=S.inputs.filter(i=>!q.inl||match(q.inl,i.name,i.url,stateTxt[stateOf(i)],...svcsOf(i).map(x=>x.name)));
   const act=i=>outsOf(i.id).filter(o=>o.enabled&&o.status?.active).length;
   const rows=sorted('inl',list,{name:i=>i.name,url:i=>i.url,state:i=>stateRank[stateOf(i)],progs:i=>svcsOf(i).length,outs:act,rate:i=>i.enabled?i.status?.kbps||0:-1});
-  const pg=paged('inl',rows);
-  const table=list.length?`<div class="tablewrap" data-pg="inl"><table class="intbl"><thead><tr>${th('inl','name','Input')}${th('inl','state','Status')}${th('inl','progs','Channels')}${th('inl','outs','Outputs active','num')}${th('inl','rate','Bitrate','num')}<th style="width:84px"></th></tr></thead><tbody>`+
+  const pg=paged('inl',rows);INVIS=list.map(i=>i.id);
+  const nSel=list.filter(i=>inSel.has(i.id)).length;
+  setTimeout(()=>{const a=$('#inl-all');if(a)a.indeterminate=nSel>0&&nSel<list.length});
+  const table=list.length?`<div class="tablewrap" data-pg="inl"><table class="intbl"><thead><tr><th class="ck"><input type="checkbox" id="inl-all" ${nSel&&nSel===list.length?'checked':''} onchange="selIns(this.checked)" aria-label="Select all ${list.length} matching inputs" title="Select all ${list.length} matching inputs"></th>${th('inl','name','Input')}${th('inl','state','Status')}${th('inl','progs','Channels')}${th('inl','outs','Outputs active','num')}${th('inl','rate','Bitrate','num')}<th style="width:84px"></th></tr></thead><tbody>`+
     pg.rows.map(i=>{const st=stateOf(i),s=i.status||{},outs=outsOf(i.id).length,chs=svcsOf(i);
       const names=chs.slice(0,3).map(x=>esc(x.name||'SID '+x.sid)).join(', ')+(chs.length>3?` +${chs.length-3}`:'');
       const kept=i.services?.length?`${chs.length} of ${(s.services||[]).length||'?'}`:`${chs.length}`;
-      return `<tr onclick="if(!event.target.closest('a,button,.copy,input'))pick(${i.id})">
+      return `<tr class="${inSel.has(i.id)?'picked':''}" onclick="if(!event.target.closest('a,button,.copy,input,label'))pick(${i.id})">
+        <td class="ck"><input type="checkbox" ${inSel.has(i.id)?'checked':''} onchange="inSelOne(${i.id},this.checked)" aria-label="Select ${esc(i.name)}"></td>
         <td><div class="nm"><span class="dot ${st}"></span><div><b>${esc(i.name)}</b><div class="u muted mono">${cp(i.url)}</div></div></div></td>
         <td>${statePill(st)}${watchLine(i)?`<div style="margin-top:3px">${watchLine(i)}</div>`:''}</td>
         <td><b class="mono">${i.enabled?kept:'—'}</b>${i.enabled&&names?`<div class="muted chn">${names}</div>`:''}</td>
@@ -976,7 +1012,9 @@ function inputsView(){
         <td class="num mono">${i.enabled?mbps(s.kbps||0)+' Mbps':'—'}</td>
         <td style="text-align:right;white-space:nowrap"><button class="ibtn sm" title="Edit" onclick="openInput(${i.id})">${icon('edit')}</button><button class="ibtn sm danger" title="Delete" onclick="delIn(${i.id})">${icon('trash')}</button></td></tr>`}).join('')+'</tbody></table></div>'+pg.bar
     :emptyState('search','No matching inputs');
-  return head+`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${list.length}</span><span class="sp"></span>${tsearch('inl','Search inputs or channels…')}${delInsBtn(list,q.inl)}</div>${table}</div>`;
+  const hidden=inSel.size-nSel;
+  return head+`<div class="card"><div class="hd"><h2>${icon('in')}Inputs</h2><span class="count">${list.length}</span><span class="sp"></span>${tsearch('inl','Search inputs or channels…')}</div>
+    ${selBar(inSel.size,'input','inSel.clear();render()','delSelIns()').replace(' selected<',` selected${hidden?` (${hidden} not shown by the search)`:''}<`)}${table}</div>`;
 }
 function outputsView(){
   return `<div class="page-hd"><div><h1>All outputs</h1><p>${S.outputs.length} output${S.outputs.length===1?'':'s'} from every input</p></div><span class="sp"></span><button class="btn" onclick="goProgs()">${icon('plus')}Create from programs</button></div>
@@ -1138,29 +1176,65 @@ async function setOuts(ids,on){
   refresh();
 }
 function delInsBtn(list,g=''){return `<button class="btn sm danger" ${list.length?'':'disabled'} onclick='delIns(${JSON.stringify(list.map(i=>i.id))},${JSON.stringify(g).replace(/'/g,'&#39;')})'>${icon('trash')}Delete all</button>`}
-async function delIns(ids,g=''){
-  if(!ids.length)return;
-  const n=S.outputs.filter(o=>ids.includes(o.input_id)).length,s=ids.length>1?'s':'';
-  if(!confirm(`Delete ${ids.length} input${s}${g?' matching "'+g+'"':''} and their ${n} output(s)? This cannot be undone.`))return;
-  try{await api('POST','api/inputs/delete',{ids});toast(`Deleted ${ids.length} input${s}`);if(ids.includes(sel))sel=null}catch(e){fail(e)}
-  refresh();
+function delIns(ids,g=''){return deleteInputs(ids,g)}
+// ---------- delete warning: says what is running and gets stopped first ----------
+function askDelete({title,sum,warn,items,more,ok,run}){
+  $('#dl-title').textContent=title;$('#dl-err').textContent='';
+  $('#dl-body').innerHTML=(warn?`<div class="dl-warn">${icon('alert')}<div>${warn}</div></div>`:'')+`<p class="dl-sum">${sum}</p>`+
+    `<ul class="dl-list">${items.join('')}${more?`<li class="more">…and ${more} more</li>`:''}</ul>`+
+    `<div class="dl-note">This cannot be undone. Settings → <b>Download backup</b> keeps a copy you can restore.</div>`;
+  const b=$('#dl-ok'),c=$('#dl-cancel');b.disabled=false;c.disabled=false;b.textContent=ok;
+  b.onclick=async()=>{
+    b.disabled=c.disabled=true;b.innerHTML=`<span class="spin" style="border-top-color:#fff"></span> ${warn?'Stopping and deleting…':'Deleting…'}`;
+    try{await run();closeM('m-del')}catch(e){$('#dl-err').textContent=e.message;b.disabled=c.disabled=false;b.textContent=ok}
+  };
+  openM('m-del');setTimeout(()=>c.focus(),0);
+}
+const LIST_MAX=8;
+function deleteInputs(ids,g=''){
+  ids=[...new Set(ids)];if(!ids.length)return;
+  const ins=ids.map(inOf).filter(Boolean),n=ins.length,s=n>1?'s':'';
+  const run=ins.filter(i=>i.enabled),outs=ins.flatMap(i=>outsOf(i.id)),act=outs.filter(o=>o.enabled&&o.status?.active).length;
+  askDelete({
+    title:`Delete ${n} input${s}?`,
+    warn:run.length?`<b>${run.length===n?(n>1?'All of them are':'It is'):run.length+' of them '+(run.length>1?'are':'is')} running.</b> ${run.length>1?'They':'It'} will be stopped first${act?`, which stops ${act} active output${act>1?'s':''}`:''}.`:'',
+    sum:`${n>1?`These ${n} inputs`:'This input'}${g?` matching “${esc(g)}”`:''} and ${outs.length?`${n>1?'their':'its'} <b>${outs.length} output${outs.length>1?'s':''}</b>`:'no outputs'} will be deleted.`,
+    items:ins.slice(0,LIST_MAX).map(i=>`<li><span class="dot ${stateOf(i)}"></span><b>${esc(i.name)}</b><span>${i.enabled?stateTxt[stateOf(i)]:'Disabled'} · ${outsOf(i.id).length} out</span></li>`),
+    more:Math.max(0,n-LIST_MAX),
+    ok:run.length?`Stop and delete ${n>1?n+' inputs':'input'}`:`Delete ${n>1?n+' inputs':'input'}`,
+    run:async()=>{
+      await api('POST','api/inputs/delete',{ids:ins.map(i=>i.id)});
+      ins.forEach(i=>inSel.delete(i.id));if(ins.some(i=>i.id===sel)){sel=null;if(view==='home')navPush=false}
+      toast(`${run.length?'Stopped and deleted':'Deleted'} ${n} input${s}`);await refresh();
+    }});
+}
+function deleteOutputs(ids){
+  ids=[...new Set(ids)];if(!ids.length)return;
+  const byId=new Map(S.outputs.map(o=>[o.id,o])),outs=ids.map(id=>byId.get(id)).filter(Boolean),n=outs.length,s=n>1?'s':'';
+  const run=outs.filter(o=>o.enabled);
+  askDelete({
+    title:`Delete ${n} output${s}?`,
+    warn:run.length?`<b>${run.length===n?(n>1?'All of them are':'It is'):run.length+' of them '+(run.length>1?'are':'is')} enabled.</b> ${run.length>1?'They':'It'} will be stopped first, so receivers of ${run.length>1?'these streams':'this stream'} lose the picture.`:'',
+    sum:`${n>1?`These ${n} outputs`:'This output'} will be deleted. The inputs and their programs are not affected.`,
+    items:outs.slice(0,LIST_MAX).map(o=>`<li><span class="dot ${!o.enabled?'off':o.status?.error?'error':o.status?.active?'ok':'nosignal'}"></span><b>${esc(o.name)}</b><span class="mono">${esc(o.url)}</span></li>`),
+    more:Math.max(0,n-LIST_MAX),
+    ok:run.length?`Stop and delete ${n>1?n+' outputs':'output'}`:`Delete ${n>1?n+' outputs':'output'}`,
+    run:async()=>{
+      await api('POST','api/outputs/delete',{ids:outs.map(o=>o.id)});
+      outs.forEach(o=>outSel.delete(o.id));
+      toast(`${run.length?'Stopped and deleted':'Deleted'} ${n} output${s}`);await refresh();
+    }});
 }
 function inSelOne(id,on){on?inSel.add(id):inSel.delete(id);render()}
 function inSelAll(on){const f=$('#filter').value.toLowerCase();S.inputs.filter(i=>!f||(i.name+i.url).toLowerCase().includes(f)).forEach(i=>on?inSel.add(i.id):inSel.delete(i.id));render()}
-async function delSelIns(){
-  const ids=[...inSel];if(!ids.length)return;
-  const n=S.outputs.filter(o=>ids.includes(o.input_id)).length,s=ids.length>1?'s':'';
-  const names=S.inputs.filter(i=>inSel.has(i.id)).map(i=>'• '+i.name);
-  if(!confirm(`Delete ${ids.length} selected input${s} and their ${n} output(s)? This cannot be undone.\n\n${names.slice(0,10).join('\n')}${names.length>10?`\n…and ${names.length-10} more`:''}`))return;
-  try{await api('POST','api/inputs/delete',{ids});toast(`Deleted ${ids.length} input${s}`);if(ids.includes(sel))sel=null;inSel.clear()}catch(e){fail(e)}
-  refresh();
-}
-async function delOuts(ids){
-  if(!ids.length)return;
-  if(!confirm(`Delete ${ids.length} output${ids.length>1?'s':''}${q.out?' matching "'+q.out+'"':''}? This cannot be undone.`))return;
-  try{await api('POST','api/outputs/delete',{ids});toast(`Deleted ${ids.length} output${ids.length>1?'s':''}`)}catch(e){fail(e)}
-  refresh();
-}
+function delSelIns(){deleteInputs([...inSel])}
+function delOuts(ids){deleteOutputs(ids)}
+// selection on All inputs (shared with the sidebar) and on output tables
+const outSel=new Set();let INVIS=[],OUTVIS=[];
+function selIns(on){INVIS.forEach(id=>on?inSel.add(id):inSel.delete(id));render()}
+function outSelOne(id,on){on?outSel.add(id):outSel.delete(id);render()}
+function selOuts(on){OUTVIS.forEach(id=>on?outSel.add(id):outSel.delete(id));render()}
+const selBar=(n,what,clear,del)=>n?`<div class="selbar"><b>${n}</b> ${what}${n>1?'s':''} selected<span class="sp"></span><button class="btn sm" onclick="${clear}">Clear selection</button><button class="btn sm danger" onclick="${del}">${icon('trash')}Delete selected</button></div>`:'';
 async function control(a){
   const msg={start:'Start (enable) all inputs?',stop:'Stop (disable) all inputs? All outputs will stop until started again.',restart:'Restart all inputs and outputs? Streams will glitch for about a second.'}[a];
   if(!confirm(msg))return;
@@ -1383,8 +1457,7 @@ async function addBulk(urls,close){
   }catch(e){$('#mi-err').textContent=e.message}
 }
 async function toggleIn(id,on){const i=S.inputs.find(x=>x.id===id);await api('PUT',`api/inputs/${id}`,{...i,status:undefined,enabled:on}).catch(fail);refresh()}
-async function delIn(id){const i=S.inputs.find(x=>x.id===id),n=S.outputs.filter(o=>o.input_id===id).length;
-  if(!confirm(`Delete input "${i.name}" and its ${n} output(s)?`))return;await api('DELETE',`api/inputs/${id}`).catch(fail);sel=null;refresh()}
+function delIn(id){deleteInputs([id])}
 
 function setProto(v){$('#mo-proto-seg').dataset.v=v;document.querySelectorAll('#mo-proto-seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}
 function openOut(id,srcSid,inputId=sel){
@@ -1414,8 +1487,7 @@ async function saveOutput(){
   }catch(e){$('#mo-err').textContent=e.message}
 }
 async function toggleOut(id,on){await api('PUT',`api/outputs/${id}`,{enabled:on}).catch(fail);refresh()}
-async function delOut(id){const o=S.outputs.find(x=>x.id===id);if(!confirm(`Delete output "${o.name}" (${o.url})?`))return;
-  await api('DELETE',`api/outputs/${id}`).catch(fail);refresh()}
+function delOut(id){deleteOutputs([id])}
 
 function openSettings(){
   const s=S.settings;$('#st-err').textContent='';

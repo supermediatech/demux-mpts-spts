@@ -106,6 +106,21 @@ func (ps *previews) temps() []InputRun {
 	return runs
 }
 
+// takeInputs removes the previews of the given inputs and returns them; the
+// caller re-applies the engine config, then kills them.
+func (ps *previews) takeInputs(ids map[int64]bool) []*preview {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+	var out []*preview
+	for k, p := range ps.m {
+		if !p.temp && ids[p.inputID] {
+			out = append(out, p)
+			delete(ps.m, k)
+		}
+	}
+	return out
+}
+
 func (ps *previews) get(key string) *preview {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
