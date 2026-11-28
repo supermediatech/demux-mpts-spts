@@ -2,7 +2,7 @@
 
 Splits multicast MPTS inputs into single-program SPTS outputs (UDP or RTP), managed from a web UI. It ships as one Go binary with the UI embedded and keeps its configuration in SQLite.
 
-![Dashboard](dashboard-screenshot.png)
+![Dashboard](dashboard.png)
 
 ## Install (release packages)
 
